@@ -20,14 +20,11 @@ Please see the Q&A section for explanations & clarifications.
 
 ## 1. 3D Parameterizations
 
-<div style="background-color: #f6f8fa; border-left: 4px solid #0969da; padding: 16px; border-radius: 6px; margin: 16px 0;">
-  <strong>💾 Disk Storage Requirements</strong>
-  <ul style="margin: 8px 0 0 0;">
-    <li>Aesthetic list: 285 GB</li>
-    <li>Non-aesthetic list: 600 GB</li>
-    <li><strong>Total: 885 GB</strong></li>
-  </ul>
-</div>
+> [!NOTE]
+> **💾 Disk Storage Requirements**
+> - Aesthetic list: 285 GB
+> - Non-aesthetic list: 600 GB
+> - **Total: 885 GB**
 
 Unlike images and videos where pixels are the common standard representation, 3D objects can be represented in many different (but related) forms: such as meshes, point clouds, implicit functions, and more recently neural fields and Gaussian splats.
 
@@ -45,12 +42,9 @@ source download_3dgs.sh
 
 ## 2. Text Captions
 
-<div style="background-color: #f6f8fa; border-left: 4px solid #0969da; padding: 16px; border-radius: 6px; margin: 16px 0;">
-  <strong>💾 Disk Storage Requirements</strong>
-  <ul style="margin: 8px 0 0 0;">
-    <li><strong>Total: 371 MB</strong></li>
-  </ul>
-</div>
+> [!NOTE]
+> **💾 Disk Storage Requirements**
+> - **Total: 371 MB**
 
 We use the captions from [**Cap3D**](https://huggingface.co/datasets/tiange/Cap3D/tree/main) and [**3DTopia** ](https://github.com/3DTopia/3DTopia/releases).
 
@@ -64,18 +58,14 @@ source download_captions.sh
 
 ## 3. 2D Renderings (Optional for Text-to-3D Task)
 
-<div style="background-color: #fff5f5; border-left: 4px solid #d73a49; padding: 16px; border-radius: 6px; margin: 16px 0;">
-  <strong>⚠️ Important Note:</strong> Downloading 2D renderings is slow and requires A LOT of disk space!
-</div>
+> [!WARNING]
+> **Important Note:** Downloading 2D renderings is slow and requires A LOT of disk space!
 
-<div style="background-color: #f6f8fa; border-left: 4px solid #0969da; padding: 16px; border-radius: 6px; margin: 16px 0;">
-  <strong>💾 Disk Storage Requirements</strong>
-  <ul style="margin: 8px 0 0 0;">
-    <li>Aesthetic list: 3.14 TB</li>
-    <li>Non-aesthetic list: 5.33 TB</li>
-    <li><strong>Total: 8.47 TB</strong></li>
-  </ul>
-</div>
+> [!NOTE]
+> **💾 Disk Storage Requirements**
+> - Aesthetic list: 3.14 TB
+> - Non-aesthetic list: 5.33 TB
+> - **Total: 8.47 TB**
 
 2D renderings provide additional photometric guidance during training. However, we can see that the 2D renderings require significantly more disk storage compared to 3D parameterizations (~10x). Therefore, we suggest optional use of 2D renderings in training.
 
@@ -92,9 +82,9 @@ source download_renderings.sh
 
 
 # WebDataset Preprocessing (Optional)
-<div style="background-color: #fff5f5; border-left: 4px solid #d73a49; padding: 16px; border-radius: 6px; margin: 16px 0;">
-  <strong>⚠️ Important Note:</strong> Making WebDatasets is only for text-to-3D generation tasks, after the 3DGS data and captions are downloaded. No images will be needed or encoded in the .tar files due to their scale. You will need ~900GB additional disk storage for storing the processed .tar files.
-</div>
+
+> [!NOTE]
+> **Important Note:** Making WebDatasets is only for text-to-3D generation tasks, after the 3DGS data and captions are downloaded. No images will be needed or encoded in the .tar files due to their scale. You will need ~900GB additional disk storage for storing the processed .tar files.
 
 
 We provide a preprocessing script that converts 3DGS fittings and text captions into WebDataset-formatted .tar files for optimized loading. To start processing, update the paths in `make_webdataset.sh` and run:

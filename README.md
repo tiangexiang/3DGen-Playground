@@ -8,6 +8,13 @@
 
 The 3D Gen Playground is a user-friendly codebase designed to accelerate 3D generation research and development. We provide an **open data platform** with standardized protocols and curated community datasets, enabling reproducible and fair model comparisons. Built on efficient data loaders, visualizers, template model baselines, and utility functions, our **plug-and-play components** seamlessly integrates into your existing workflows, allowing you to focus on innovation rather than infrastructure. 
 
+## Development Plan
+
+- [x] Dataloaders for both with/without photometric guidance
+- [ ] Spark visualizer 
+- [ ] Baseline tokenizers and generative models
+- [ ] Evaluation pipeline
+
 ## Installation
 
 0. Create a virtual environment:
@@ -36,7 +43,7 @@ Please see the **[data](data/)** folder for detailed downloading instructions.
 
 ## Data Loaders
 
-> [!WARNING]
+> [!IMPORTANT]
 > **Important Note:** The loaders are demonstrated for single-GPU fetching. Please follow [PyTorch's distributed training guideline](https://docs.pytorch.org/tutorials/intermediate/ddp_tutorial.html) or [third-party distributed training techniques](https://github.com/huggingface/accelerate) to make the loaders distributed.
 
 We provide two types of data loaders for text-to-3D object generation tasks, each optimized for different use cases:
