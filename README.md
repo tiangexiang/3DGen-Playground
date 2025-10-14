@@ -31,7 +31,10 @@ pip install -r requirements.txt
 
 ## Configuration
 
-Before proceeding, configure your environment variables & download paths at `.env`:
+Before proceeding, all your environment variables & download paths need to be configured at `.env`. Please first copy the file `.env.example` and set up your paths accordingly:
+```bash
+cp .env.example .env
+```
 
 All shell scripts will automatically read from `.env`.
 
@@ -89,7 +92,7 @@ We provide two types of data loaders for text-to-3D object generation tasks, eac
 > [!WARNING]
 > You will need preprocessed .tar files as instructed in the [WebDataset Preprocessing section](data/README.md#webdataset-preprocessing-optional).
 
-   This loader uses WebDataset format for optimized loading of 3DGS data and captions only, ideal for large-scale training.
+   This loader uses WebDataset format for optimized loading of 3DGS data and captions without any image renderings, ideal for fast model verification but not for the best quality.
 
 
    A minimal plug-and-play code snippet:
@@ -140,7 +143,7 @@ The 3D Gen Playground addresses these issues by leveraging the publicly availabl
 <summary><strong>Why use 3DGS?</strong></summary>
 <br>
 
-3D Gaussian Splatting (3DGS) has become increasingly popular in 3D generation due to its explicit parameterization and exceptional rendering quality. Recent projects like GaussianAtlas, DreamGaussian, LGM, DiffSplat, and <a href="https://supergaussian.github.io/">SuperGaussian</a> have demonstrated its effectiveness.
+3D Gaussian Splatting (3DGS) has become increasingly popular in 3D generation due to its explicit parameterization and exceptional rendering quality. Recent projects like GaussianAtlas, DreamGaussian, LGM, DiffSplat, and SuperGaussian have demonstrated its effectiveness from the generation perspective.
 
 While 3D content can be represented in various formats (meshes, voxels, point clouds, etc.), these representations are intrinsically related. As noted by <a href="https://github.com/microsoft/TRELLIS">TRELLIS</a>, successfully generating one representation (such as 3DGS) provides a strong foundation that can be easily extended to other 3D formats. This makes 3DGS an ideal starting point for general 3D generation research. Moreover, 3DGS can be easily converted into <a href="https://github.com/Anttwo/SuGaR">meshes</a> and other formats.
 </details>
@@ -164,6 +167,15 @@ For researchers seeking to validate their ideas before investing in larger-scale
 
 ## Citations
 Please cite the 3D Gen Playground if you find it useful in your research!
+
+```bibtex
+@inproceedings{gaussianatlas2025,
+  title     = {Repurposing 2D Diffusion Models with Gaussian Atlas for 3D Generation},
+  author    = {Xiang, Tiange and Li, Kai and Long, Chengjiang and H{\\"a}ne, Christian and Guo, Peihong and Delp, Scott and Adeli, Ehsan and Fei-Fei, Li},
+  booktitle = {Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
+  year      = {2025}
+}
+```
 
 ```bibtex
 @misc{xiang2025_3dgen_playground,
