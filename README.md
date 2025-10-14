@@ -44,7 +44,7 @@ Please see the **[data](data/)** folder for detailed downloading instructions.
 ## Data Loaders
 
 > [!IMPORTANT]
-> **Important Note:** The loaders are demonstrated for single-GPU fetching. Please follow [PyTorch's distributed training guideline](https://docs.pytorch.org/tutorials/intermediate/ddp_tutorial.html) or [third-party distributed training techniques](https://github.com/huggingface/accelerate) to make the loaders distributed.
+> The loaders are demonstrated for single-GPU fetching. Please follow [PyTorch's distributed training guideline](https://docs.pytorch.org/tutorials/intermediate/ddp_tutorial.html) or [third-party distributed training techniques](https://github.com/huggingface/accelerate) to make the loaders distributed.
 
 We provide two types of data loaders for text-to-3D object generation tasks, each optimized for different use cases:
 
@@ -88,7 +88,7 @@ for batch in dataloader:
 This loader uses WebDataset format for optimized loading of 3DGS data and captions only, ideal for large-scale training.
 
 > [!WARNING]
-> **Important Note:** You will need preprocessed .tar files as instructed in the WebDataset Preprocessing section.
+> You will need preprocessed .tar files as instructed in the [WebDataset Preprocessing section](data/README.md#webdataset-preprocessing-optional).
 
 A minimal plug-and-play code snippet:
 
@@ -160,10 +160,6 @@ Key points:
 For researchers seeking to validate their ideas before investing in larger-scale infrastructure, this dataset provides an accessible and standardized starting point.
 </details> 
 
-## Contributions
-
-We are always open to suggestions & contributions from the community, feel free to open an issue or submit a PR.
-
 ## Citations
 Please cite the 3D Gen Playground if you find it useful in your research!
 
@@ -176,6 +172,10 @@ Please cite the 3D Gen Playground if you find it useful in your research!
   note         = {GitHub repository}
 }
 ```
+
+## Contributions
+
+We are always open to suggestions & contributions from the community, feel free to open an issue or submit a PR.
 
 ## Acknowledgements
 

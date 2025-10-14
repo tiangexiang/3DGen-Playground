@@ -59,7 +59,7 @@ source download_captions.sh
 ## 3. 2D Renderings (Optional for Text-to-3D Task)
 
 > [!WARNING]
-> **Important Note:** Downloading 2D renderings is slow and requires A LOT of disk space!
+> Downloading 2D renderings is slow and requires A LOT of disk space!
 
 > [!NOTE]
 > **💾 Disk Storage Requirements**
@@ -84,7 +84,7 @@ source download_renderings.sh
 # WebDataset Preprocessing (Optional)
 
 > [!NOTE]
-> **Important Note:** Making WebDatasets is only for text-to-3D generation tasks, after the 3DGS data and captions are downloaded. No images will be needed or encoded in the .tar files due to their scale. You will need ~900GB additional disk storage for storing the processed .tar files.
+> Making WebDatasets is only for text-to-3D generation tasks, after the 3DGS data and captions are downloaded. No images will be needed or encoded in the .tar files due to their scale. You will need ~900GB additional disk storage for storing the processed .tar files.
 
 
 We provide a preprocessing script that converts 3DGS fittings and text captions into WebDataset-formatted .tar files for optimized loading. To start processing, update the paths in `make_webdataset.sh` and run:
