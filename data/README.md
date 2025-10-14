@@ -1,4 +1,4 @@
-# Data Downloading
+# Data Downloading & Preprocessing
 
 Every model training requires data. At The 3D Gen Playground, we are dedicated to making 3D data open and consistent. We provide public access to a fixed set of data to make 3D Gen model training consistent. All you need to do is download and run a few preprocessing steps.
 
@@ -14,7 +14,7 @@ For (text/image to) 3D object generation tasks, there are three different data t
 
 Thanks to the open-source community, the task of 3D object generation has been made easier by utilizing high-quality data that has been precomputed and publicly released by researchers in the community.
 
-Please see the Q&A section for explanations & clarifications.
+Please see the [Q&A section](../README.md#qa) for explanations & clarifications.
 
 ---
 
