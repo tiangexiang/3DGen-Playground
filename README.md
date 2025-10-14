@@ -10,8 +10,8 @@ The 3D Gen Playground is a user-friendly codebase designed to accelerate 3D gene
 
 ## Development Plan
 
-- [x] Dataloaders for both with/without photometric guidance
-- [ ] Spark visualizer 
+- [x] Two types of dataloaders
+- [ ] Spark visualizer @Ryan-Rong-24
 - [ ] Baseline tokenizers and generative models
 - [ ] Evaluation pipeline
 
