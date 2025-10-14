@@ -86,11 +86,11 @@ We provide two types of data loaders for text-to-3D object generation tasks, eac
 
 
 2. **Fast Setting**
-   
+> [!WARNING]
+> You will need preprocessed .tar files as instructed in the [WebDataset Preprocessing section](data/README.md#webdataset-preprocessing-optional).
+
    This loader uses WebDataset format for optimized loading of 3DGS data and captions only, ideal for large-scale training.
 
-   > [!WARNING]
-   > You will need preprocessed .tar files as instructed in the [WebDataset Preprocessing section](data/README.md#webdataset-preprocessing-optional).
 
    A minimal plug-and-play code snippet:
 
