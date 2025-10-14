@@ -26,7 +26,7 @@ for i in {0..8}; do
         # Use 'zipinfo -1' for a fast check the file is readable instead of 'unzip -tqq'
         if zipinfo -1 "$zip_file" > /dev/null 2>&1; then
             echo "[OK] Unzipping GaussianVerse_aesthetic_chunk_$i.zip"
-            unzip -q "$zip_file" -d "$GS_PATH/GaussianVerse_aesthetic_chunk_$i"
+            unzip -q "$zip_file" -d "$GS_PATH"
         else
             echo -e "\033[0;31m[ERROR] GaussianVerse_aesthetic_chunk_$i.zip is incomplete. Something is wrong with the download.\033[0m"
         fi
@@ -40,7 +40,7 @@ for i in {0..17}; do
     if [ -f "$zip_file" ]; then
         if unzip -tqq "$zip_file"; then
             echo "[OK] Unzipping GaussianVerse_chunk_$i.zip"
-            unzip -q "$zip_file" -d "$GS_PATH/GaussianVerse_chunk_$i"
+            unzip -q "$zip_file" -d "$GS_PATH"
         else
             echo -e "\033[0;31m[ERROR] GaussianVerse_chunk_$i.zip is incomplete. Something is wrong with the download.\033[0m"
         fi

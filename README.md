@@ -22,7 +22,7 @@ The 3D Gen Playground is a user-friendly codebase designed to accelerate 3D gene
 conda create -n 3dgen python=3.10
 ```
 
-1. Install [PyTorch](https://pytorch.org/get-started/previous-versions/) based on your system configurations. The code base was tested on torch==2.4.0.
+1. Install [PyTorch](https://pytorch.org/get-started/previous-versions/) based on your system configurations. The code base was tested on torch==2.4.0, but may also work on other pytorch variants.
 
 2. Install the required dependencies:
 ```bash
