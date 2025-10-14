@@ -6,9 +6,14 @@
 
 </div>
 
-Welcome to the 3D Gen Playground—a user-friendly codebase designed to accelerate 3D generation research and development. We provide an **open data platform** with standardized protocols and curated community datasets, enabling reproducible and fair model comparisons. Built on efficient data loaders, visualizers, template model baselines, and utility functions, our **plug-and-play components** seamlessly integrates into your existing workflows, allowing you to focus on innovation rather than infrastructure. 
+The 3D Gen Playground is a user-friendly codebase designed to accelerate 3D generation research and development. We provide an **open data platform** with standardized protocols and curated community datasets, enabling reproducible and fair model comparisons. Built on efficient data loaders, visualizers, template model baselines, and utility functions, our **plug-and-play components** seamlessly integrates into your existing workflows, allowing you to focus on innovation rather than infrastructure. 
 
 ## Installation
+
+0. Create a virtual environment:
+```bash
+conda create -n 3dgen python=3.10
+```
 
 1. Install [PyTorch](https://pytorch.org/get-started/previous-versions/) based on your system configurations. The code base was tested on torch==2.4.0.
 
@@ -19,31 +24,20 @@ pip install -r requirements.txt
 
 ## Configuration
 
-Before downloading data or creating WebDatasets, configure your environment paths:
+Before proceeding, configure your environment variables & download paths at `.env`:
 
-1. Copy the example configuration file:
-```bash
-cp config.env.example config.env
-```
-
-2. Edit `config.env` and update all paths to match your system setup. This file contains:
-   - Data storage directories
-   - Object list paths
-   - Download configurations
-   - WebDataset output paths
-
-All shell scripts (download and preprocessing) will automatically read from `config.env`.
+All shell scripts will automatically read from `.env`.
 
 ## Dataset Downloading & Preprocessing
 
 The core feature of this project is its **Open Data** approach. We provide curated access to community datasets with standardized formats for consistent training across different models.
 
-Please see **[data.md](data/)** in the `data/` folder for detailed downloading instructions.
+Please see the **[data](data/)** folder for detailed downloading instructions.
 
 ## Data Loaders
-<div style="background-color: #fff5f5; border-left: 4px solid #d73a49; padding: 16px; border-radius: 6px; margin: 16px 0;">
-  <strong>⚠️ Important Note:</strong> The loaders are demonstrated for single-GPU fetching. Please follow <a href="https://docs.pytorch.org/tutorials/intermediate/ddp_tutorial.html">PyTorch's distributed training guideline</a> or <a href="https://github.com/huggingface/accelerate">third-party distributed training techniques</a> to make the loaders distributed.
-</div>
+
+> [!WARNING]
+> **Important Note:** The loaders are demonstrated for single-GPU fetching. Please follow [PyTorch's distributed training guideline](https://docs.pytorch.org/tutorials/intermediate/ddp_tutorial.html) or [third-party distributed training techniques](https://github.com/huggingface/accelerate) to make the loaders distributed.
 
 We provide two types of data loaders for text-to-3D object generation tasks, each optimized for different use cases:
 
@@ -86,9 +80,8 @@ for batch in dataloader:
 2. **Fast Setting**
 This loader uses WebDataset format for optimized loading of 3DGS data and captions only, ideal for large-scale training.
 
-<div style="background-color: #fff5f5; border-left: 4px solid #d73a49; padding: 16px; border-radius: 6px; margin: 16px 0;">
-  <strong>⚠️ Important Note:</strong> You will need preprocessed .tar files as instructed in the WebDataset Preprocessing section.
-</div>
+> [!WARNING]
+> **Important Note:** You will need preprocessed .tar files as instructed in the WebDataset Preprocessing section.
 
 A minimal plug-and-play code snippet:
 
