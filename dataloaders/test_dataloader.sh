@@ -15,8 +15,8 @@ python standard_3dgen_loader.py \
     --caption_path $CAPTIONS_PATH \
     --rendering_path $RENDERINGS_DIR \
     --num_images 1 \
-    --mean_file $MEAN_FILE \
-    --std_file $STD_FILE \
+    --mean_file $GS_MEAN_FILE \
+    --std_file $GS_STD_FILE \
     --batch_size 2 \
     --num_workers 0
 
