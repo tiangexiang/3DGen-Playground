@@ -11,20 +11,36 @@ The 3D Gen Playground is a user-friendly codebase designed to accelerate 3D gene
 ## Development Plan
 
 - [x] Two types of dataloaders
-- [ ] Spark visualizer @Ryan-Rong-24
+- [x] Interactive 3DGS Viewer (Spark-powered)
 - [ ] Baseline tokenizers and generative models
 - [ ] Evaluation pipeline
 
 ## Installation
 
-0. Create a virtual environment:
+### 1. Clone the Repository
+
 ```bash
-conda create -n 3dgen python=3.10
+git clone --recurse-submodules https://github.com/tiangexiang/3DGen-Playground.git
+cd 3DGen-Playground
 ```
 
-1. Install [PyTorch](https://pytorch.org/get-started/previous-versions/) based on your system configurations. The code base was tested on torch==2.4.0, but may also work on other pytorch variants.
+If you already cloned without submodules, initialize them:
+```bash
+git submodule update --init --recursive
+```
 
-2. Install the required dependencies:
+### 2. Create Virtual Environment
+
+```bash
+conda create -n 3dgen python=3.10
+conda activate 3dgen
+```
+
+### 3. Install [PyTorch](https://pytorch.org/get-started/previous-versions/) based on your system configurations. 
+
+The code base was tested on torch==2.4.0, but may also work on other pytorch variants.
+
+### 4. Install the required dependencies:
 ```bash
 pip install -r requirements.txt
 ```
@@ -53,6 +69,33 @@ We provide two types of data loaders to facilitate your training process:
 2. **[Fast Loader](dataloaders/README.md#fast-setting)**: Use this if you've only downloaded 3DGS fittings and captions. This loader is optimized for quick text-to-3D generation training.
 
 For detailed information and plug-and-play instructions, see the **[dataloaders/](dataloaders/)** folder.
+
+## Interactive 3DGS Viewer
+
+We provide a production-ready web viewer for exploring and visualizing 3DGS data. Perfect for:
+- 🔍 Inspecting downloaded GaussianVerse data
+- 🎨 Previewing generated 3DGS outputs
+- 📊 Quality checking and debugging
+- 🎓 Research demonstrations and presentations
+
+**Quick Start:**
+
+```bash
+cd viewer
+python serve.py
+# Open http://localhost:8000/viewer/index.html
+```
+
+Enter an object ID (e.g., `9350303`) or path (e.g., `1876/9374307`) to instantly visualize the 3DGS data.
+
+**Features:**
+- Interactive input for loading any object
+- Real-time rendering with [Spark](https://sparkjs.dev) (included as submodule)
+- Automatically reads `GS_PATH` from your `.env` file
+- URL parameters for sharing specific objects
+- Responsive design for desktop and mobile
+
+For detailed usage, configuration, and integration instructions, see the **[viewer/](viewer/)** folder.
 
 ## Models
 

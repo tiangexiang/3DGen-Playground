@@ -1,0 +1,3 @@
+[submodule "spark"]
+	path = spark
+	url = https://github.com/sparkjsdev/spark.git
