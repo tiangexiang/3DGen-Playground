@@ -36,7 +36,9 @@ conda create -n 3dgen python=3.10
 conda activate 3dgen
 ```
 
-### 3. Install [PyTorch](https://pytorch.org/get-started/previous-versions/) based on your system configurations. The code base was tested on torch==2.4.0, but may also work on other pytorch variants.
+### 3. Install [PyTorch](https://pytorch.org/get-started/previous-versions/) based on your system configurations. 
+
+The code base was tested on torch==2.4.0, but may also work on other pytorch variants.
 
 ### 4. Install the required dependencies:
 ```bash
