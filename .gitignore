@@ -1,0 +1,54 @@
+# Custom directories
+helper/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Logs
+*.log
+
+# Environment variables
+.env.local
+config.env
+config.env.example
+
+# Data and model files (optional - uncomment if needed)
+# *.tar
+# *.tar.gz
+# *.zip
+# *.pth
+# *.ckpt
+
+# Temporary files
+*.tmp
+*.bak
