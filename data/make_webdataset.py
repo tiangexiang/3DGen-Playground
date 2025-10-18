@@ -63,7 +63,6 @@ def load_ply(path):
 
     features = np.concatenate((features_dc, features_extra), axis=-1).reshape(xyz.shape[0], -1)
 
-
     return np.concatenate((xyz, opacities, features, scales, rots), axis=1).astype(np.float32)
 
 

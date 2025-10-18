@@ -11,27 +11,46 @@ The 3D Gen Playground is a user-friendly codebase designed to accelerate 3D gene
 ## Development Plan
 
 - [x] Two types of dataloaders
-- [ ] Spark visualizer @Ryan-Rong-24
+- [x] Interactive 3DGS Viewer (Spark-powered)
 - [ ] Baseline tokenizers and generative models
 - [ ] Evaluation pipeline
 
 ## Installation
 
-0. Create a virtual environment:
+### 1. Clone the Repository
+
 ```bash
-conda create -n 3dgen python=3.10
+git clone --recurse-submodules https://github.com/tiangexiang/3DGen-Playground.git
+cd 3DGen-Playground
 ```
 
-1. Install [PyTorch](https://pytorch.org/get-started/previous-versions/) based on your system configurations. The code base was tested on torch==2.4.0, but may also work on other pytorch variants.
+If you already cloned without submodules, initialize them:
+```bash
+git submodule update --init --recursive
+```
 
-2. Install the required dependencies:
+### 2. Create Virtual Environment
+
+```bash
+conda create -n 3dgen python=3.10
+conda activate 3dgen
+```
+
+### 3. Install [PyTorch](https://pytorch.org/get-started/previous-versions/) based on your system configurations. 
+
+The code base was tested on torch==2.4.0, but may also work on other pytorch variants.
+
+### 4. Install the required dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
 ## Configuration
 
-Before proceeding, configure your environment variables & download paths at `.env`:
+Before proceeding, all your environment variables & download paths need to be configured at `.env`. Please first copy the file `.env.example` and set up your paths accordingly:
+```bash
+cp .env.example .env
+```
 
 All shell scripts will automatically read from `.env`.
 
@@ -39,81 +58,44 @@ All shell scripts will automatically read from `.env`.
 
 The core feature of this project is its **Open Data** approach. We provide curated access to community datasets with standardized formats for consistent training across different models.
 
-Please see the **[data](data/)** folder for detailed downloading instructions.
+Please see the **[data/](data/)** folder for detailed downloading instructions.
 
 ## Data Loaders
 
-> [!IMPORTANT]
-> The loaders are demonstrated for single-GPU fetching. Please follow [PyTorch's distributed training guideline](https://docs.pytorch.org/tutorials/intermediate/ddp_tutorial.html) or [third-party distributed training techniques](https://github.com/huggingface/accelerate) to make the loaders distributed.
+We provide two types of data loaders to facilitate your training process:
 
-We provide two types of data loaders for text-to-3D object generation tasks, each optimized for different use cases:
+1. **[Standard Loader](dataloaders/README.md#standard-setting)**: Use this if you've downloaded 3DGS fittings, captions, and 2D renderings. This loader enables photometric guidance for improved generation quality.
 
-1. **Standard Setting**
-   
-   This loader supports both 3DGS data and optional 2D renderings. See `dataloaders/standard_3dgen_loader.py` for implementation details. To test the loader, configure the paths in `dataloaders/test_dataloader.sh` and run the script to perform a quick sanity check.
+2. **[Fast Loader](dataloaders/README.md#fast-setting)**: Use this if you've only downloaded 3DGS fittings and captions. This loader is optimized for quick text-to-3D generation training.
 
-   A minimal plug-and-play code snippet:
+For detailed information and plug-and-play instructions, see the **[dataloaders/](dataloaders/)** folder.
 
-   ```python
-   from dataloader.standard_3dgen_loader import create_dataloader
+## Interactive 3DGS Viewer
 
-   dataset, dataloader = create_dataloader(
-       obj_list,        # Paths to aesthetic_list.json and/or non_aesthetic_list.json
-       gs_path,         # Root path to the directory containing downloaded GaussianVerse fittings
-       caption_path,    # Path to the preprocessed captions.json file
-       rendering_path,  # Root path to the directory containing downloaded 2D renderings (tar.gz files, optional), default: None
-       num_images,      # Number of images to randomly sample per object (only when rendering_path is provided)
-       mean_file,       # Path to the GS mean file for normalization
-       std_file,        # Path to the GS std file for normalization
-       batch_size,      # Number of samples per batch
-       num_workers,     # Number of worker processes for data loading
-       shuffle,         # Whether to shuffle the dataset, default: True
-   )
+We provide a production-ready web viewer for exploring and visualizing 3DGS data. Perfect for:
+- 🔍 Inspecting downloaded GaussianVerse data
+- 🎨 Previewing generated 3DGS outputs
+- 📊 Quality checking and debugging
+- 🎓 Research demonstrations and presentations
 
-   # Iterate through data
-   for batch in dataloader:
-       # batch is a dictionary containing:
-       point_clouds = batch['point_cloud']  # (batch_size, num_points, feature_dim)
-       captions = batch['caption']          # List of text strings
-       
-       # Optional fields (when rendering_path is provided):
-       if 'images' in batch:
-           images = batch['images']         # (batch_size, num_images, H, W, 3)
-           cameras = batch['cameras']       # Dictionary with keys: K, R, t, c2w, fov_x, fov_y
-       # ... do your stuff ... 
-   ```
+**Quick Start:**
 
+```bash
+cd viewer
+python serve.py
+# Open http://localhost:8000/viewer/index.html
+```
 
+Enter an object ID (e.g., `9350303`) or path (e.g., `1876/9374307`) to instantly visualize the 3DGS data.
 
-2. **Fast Setting**
-> [!WARNING]
-> You will need preprocessed .tar files as instructed in the [WebDataset Preprocessing section](data/README.md#webdataset-preprocessing-optional).
+**Features:**
+- Interactive input for loading any object
+- Real-time rendering with [Spark](https://sparkjs.dev) (included as submodule)
+- Automatically reads `GS_PATH` from your `.env` file
+- URL parameters for sharing specific objects
+- Responsive design for desktop and mobile
 
-   This loader uses WebDataset format for optimized loading of 3DGS data and captions only, ideal for large-scale training.
-
-
-   A minimal plug-and-play code snippet:
-
-   ```python
-   from dataloader.fast_3dgen_loader import create_dataloader
-
-   dataset, dataloader = create_dataloader(
-       shard_pattern,        # URL to the preprocessed .tar files. E.g. "/THE/PATH/TO/YOUR/SHARDS/gaussianverse-*.tar"
-       mean_file,       # Path to the GS mean file for normalization
-       std_file,        # Path to the GS std file for normalization
-       batch_size,      # Number of samples per batch
-       num_workers,     # Number of worker processes for data loading
-       shuffle,         # Whether to shuffle the dataset, default: True
-   )
-
-   # Iterate through data
-   for batch in dataloader:
-       # batch is a dictionary containing:
-       point_clouds = batch['point_cloud']  # (batch_size, num_points, feature_dim)
-       captions = batch['caption']          # List of text strings
-       # ... do your stuff ... 
-   ```
-
+For detailed usage, configuration, and integration instructions, see the **[viewer/](viewer/)** folder.
 
 ## Models
 
@@ -140,7 +122,7 @@ The 3D Gen Playground addresses these issues by leveraging the publicly availabl
 <summary><strong>Why use 3DGS?</strong></summary>
 <br>
 
-3D Gaussian Splatting (3DGS) has become increasingly popular in 3D generation due to its explicit parameterization and exceptional rendering quality. Recent projects like GaussianAtlas, DreamGaussian, LGM, DiffSplat, and <a href="https://supergaussian.github.io/">SuperGaussian</a> have demonstrated its effectiveness.
+3D Gaussian Splatting (3DGS) has become increasingly popular in 3D generation due to its explicit parameterization and exceptional rendering quality. Recent projects like GaussianAtlas, DreamGaussian, LGM, DiffSplat, and SuperGaussian have demonstrated its effectiveness from the generation perspective.
 
 While 3D content can be represented in various formats (meshes, voxels, point clouds, etc.), these representations are intrinsically related. As noted by <a href="https://github.com/microsoft/TRELLIS">TRELLIS</a>, successfully generating one representation (such as 3DGS) provides a strong foundation that can be easily extended to other 3D formats. This makes 3DGS an ideal starting point for general 3D generation research. Moreover, 3DGS can be easily converted into <a href="https://github.com/Anttwo/SuGaR">meshes</a> and other formats.
 </details>
@@ -164,6 +146,15 @@ For researchers seeking to validate their ideas before investing in larger-scale
 
 ## Citations
 Please cite the 3D Gen Playground if you find it useful in your research!
+
+```bibtex
+@inproceedings{gaussianatlas2025,
+  title     = {Repurposing 2D Diffusion Models with Gaussian Atlas for 3D Generation},
+  author    = {Xiang, Tiange and Li, Kai and Long, Chengjiang and H{\\"a}ne, Christian and Guo, Peihong and Delp, Scott and Adeli, Ehsan and Fei-Fei, Li},
+  booktitle = {Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
+  year      = {2025}
+}
+```
 
 ```bibtex
 @misc{xiang2025_3dgen_playground,
