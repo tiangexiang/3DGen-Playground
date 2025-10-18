@@ -1,3 +1,5 @@
+![GaussianVerse Teaser](../assets/gaussianverse_teaser.gif)
+
 # Data Downloading & Preprocessing
 
 Every model training requires data. At The 3D Gen Playground, we are dedicated to making 3D data open and consistent. We provide public access to a fixed set of data to make 3D Gen model training consistent. All you need to do is download and run a few preprocessing steps.

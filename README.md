@@ -2,7 +2,7 @@
 
 # The 3D Gen Playground
 
-![GaussianVerse Teaser](assets/gaussianverse_teaser.gif)
+![3dgen Teaser](assets/3dgen_teaser.webp)
 
 </div>
 
@@ -73,7 +73,7 @@ For detailed information and plug-and-play instructions, see the **[dataloaders/
 ## Interactive 3DGS Viewer
 
 We provide a production-ready web viewer for exploring and visualizing 3DGS data. Perfect for:
-- 🔍 Inspecting downloaded GaussianVerse data
+- 🔍 Inspecting downloaded/generated GaussianVerse data
 - 🎨 Previewing generated 3DGS outputs
 - 📊 Quality checking and debugging
 - 🎓 Research demonstrations and presentations
