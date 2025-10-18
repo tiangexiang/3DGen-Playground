@@ -3,15 +3,26 @@
 Simple HTTP server for the 3DGen Playground Interactive Viewer.
 
 This server handles CORS and proper MIME types for serving 3DGS data and the viewer.
-Supports both Python 3.x versions.
+Supports both Python 3.x versions and SSH tunneling for remote access.
 
 Usage:
-    python serve.py [port]
+    python serve.py [port] [--host HOST]
     
 Default port: 8000
+Default host: localhost (127.0.0.1)
 
-Example:
+Examples:
     python serve.py 8080
+    python serve.py 8000 --host 0.0.0.0  # Allow remote access (e.g., via SSH tunnel)
+    
+SSH Tunnel Usage (for remote servers):
+    # On your local machine:
+    ssh -L 8000:localhost:8000 user@remote-server
+    
+    # On the remote server:
+    python serve.py 8000
+    
+    # Then open http://localhost:8000/viewer/index.html in your local browser
 """
 
 import http.server
@@ -20,6 +31,8 @@ import sys
 import os
 import json
 import mimetypes
+import argparse
+import socket
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs, unquote
 
@@ -219,10 +232,44 @@ class CORSRequestHandler(http.server.SimpleHTTPRequestHandler):
         sys.stderr.write(f"{color}[{self.log_date_time_string()}] {format % args}{RESET}\n")
 
 
+def get_hostname():
+    """Get the hostname of the current machine."""
+    try:
+        return socket.gethostname()
+    except:
+        return "unknown"
+
+
 def main():
     """Start the development server."""
-    # Get port from command line or use default
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(
+        description='3DGen Playground Interactive Viewer Server',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python serve.py                    # Start on localhost:8000
+  python serve.py 8080               # Start on localhost:8080
+  python serve.py 8000 --host 0.0.0.0  # Allow remote access
+  
+SSH Tunnel (for remote servers):
+  # On local machine:
+  ssh -L 8000:localhost:8000 user@remote-server
+  
+  # On remote server:
+  python serve.py 8000
+  
+  # Then visit http://localhost:8000/viewer/index.html locally
+        """
+    )
+    parser.add_argument('port', type=int, nargs='?', default=8000,
+                        help='Port to run the server on (default: 8000)')
+    parser.add_argument('--host', type=str, default='127.0.0.1',
+                        help='Host to bind to (default: 127.0.0.1). Use 0.0.0.0 for all interfaces')
+    
+    args = parser.parse_args()
+    port = args.port
+    host = args.host
     
     # Ensure we're in the correct directory
     viewer_dir = Path(__file__).parent
@@ -238,12 +285,26 @@ def main():
     else:
         env_status = '⚠️  Not configured (set GS_PATH in .env or configure in UI)'
     
-    print("\n" + "="*60)
+    # Get hostname for display
+    hostname = get_hostname()
+    
+    print("\n" + "="*70)
     print("🎨 3DGen Playground - Interactive 3DGS Viewer")
-    print("="*60)
+    print("="*70)
     print(f"\n📂 Serving from: {project_root}")
-    print(f"🌐 Server running at: http://localhost:{port}")
-    print(f"🔗 Viewer URL: http://localhost:{port}/viewer/index.html")
+    print(f"🌐 Server binding: {host}:{port}")
+    
+    # Show appropriate URLs based on host binding
+    if host == '0.0.0.0':
+        print(f"\n🔗 Access URLs:")
+        print(f"   Local:        http://localhost:{port}/viewer/index.html")
+        print(f"   Network:      http://{hostname}:{port}/viewer/index.html")
+        print(f"   (or use your machine's IP address)")
+    elif host == '127.0.0.1' or host == 'localhost':
+        print(f"🔗 Viewer URL:   http://localhost:{port}/viewer/index.html")
+    else:
+        print(f"🔗 Viewer URL:   http://{host}:{port}/viewer/index.html")
+    
     print(f"\n⚙️  Configuration:")
     if gs_path:
         print(f"   GS_PATH (.env): {gs_path}")
@@ -257,15 +318,25 @@ def main():
     else:
         print(f"   GS_PATH: (not set)")
     print(f"   Status: {env_status}")
+    
+    # Show SSH tunnel instructions if on localhost
+    if host in ['127.0.0.1', 'localhost']:
+        print("\n🔐 SSH Tunnel (for remote servers):")
+        print(f"   On local:  ssh -L {port}:localhost:{port} user@{hostname}")
+        print(f"   On remote: python serve.py {port}")
+        print(f"   Then open: http://localhost:{port}/viewer/index.html")
+    
     print("\n💡 Tips:")
     print("   - GS_PATH can be relative ('sample_data') or absolute ('/path/to/data')")
-    print("   - Or configure manually in the viewer UI")
+    print("   - Configure data path in .env or manually in the viewer UI")
+    if host in ['127.0.0.1', 'localhost']:
+        print("   - Use --host 0.0.0.0 to allow remote network access")
     print("   - Press Ctrl+C to stop the server")
-    print("\n" + "="*60 + "\n")
+    print("\n" + "="*70 + "\n")
     
     # Create server
     try:
-        with socketserver.TCPServer(("", port), CORSRequestHandler) as httpd:
+        with socketserver.TCPServer((host, port), CORSRequestHandler) as httpd:
             httpd.serve_forever()
     except KeyboardInterrupt:
         print("\n\n👋 Server stopped. Goodbye!\n")
