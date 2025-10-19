@@ -119,6 +119,22 @@ The 3D Gen Playground addresses these issues by leveraging the publicly availabl
 </details>
 
 <details>
+<summary><strong>Who should use this project?</strong></summary>
+<br>
+
+This project is perfect for anyone who:
+
+<ul>
+<li><strong>Wants to explore generative models for 3D</strong></li>
+<li><strong>Worries about competing with state-of-the-art models</strong> due to limited access to 'in-house' secret training data</li>
+<li><strong>Hesitates to enter 3D generation research</strong> because the barriers feel too high</li>
+</ul>
+
+We've designed this project to democratize 3D object generation: all you need to do is download the data and start training. No complex pipelines, no proprietary datasets, just plug-and-play components ready for your research. Give it a try!
+
+</details>
+
+<details>
 <summary><strong>Why use 3DGS?</strong></summary>
 <br>
 
