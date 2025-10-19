@@ -58,6 +58,7 @@ def normalize_web_path(path, project_root):
     Normalize a path for web serving.
     
     This function handles:
+    - Tilde paths (~/) -> expand to absolute path
     - Absolute filesystem paths inside the repo -> convert to relative web path
     - Absolute filesystem paths outside the repo -> mark with special prefix
     - Relative paths -> ensure they're relative to repo root
@@ -65,10 +66,14 @@ def normalize_web_path(path, project_root):
     Examples:
         'sample_data' -> 'sample_data'
         '../sample_data' -> 'sample_data'
+        '~/test/data' -> '/absolute/home/user/test/data' (expanded and outside repo)
         '/Users/user/repo/sample_data' -> 'sample_data' (inside repo)
         '/other/path/data' -> '/absolute/other/path/data' (outside repo, special prefix)
     """
     path = path.rstrip('/')  # Remove trailing slashes
+    
+    # Expand tilde (~) to home directory first, before any other processing
+    path = os.path.expanduser(path)
     
     # If it's an absolute filesystem path
     if path.startswith('/'):
@@ -123,6 +128,10 @@ class CORSRequestHandler(http.server.SimpleHTTPRequestHandler):
         """Handle OPTIONS requests for CORS preflight."""
         self.send_response(200)
         self.end_headers()
+    
+    def do_HEAD(self):
+        """Handle HEAD requests - delegate to GET handler."""
+        self.do_GET()
     
     def do_GET(self):
         """Handle GET requests with custom API endpoints."""
