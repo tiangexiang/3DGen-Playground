@@ -99,6 +99,14 @@ For detailed usage, configuration, and integration instructions, see the **[view
 
 ## Models
 
+- [ ] Tokenizers
+- [ ] Transformer baseline
+- [ ] Pre-trained tokenizer weights
+
+To be updated soon!
+
+## Evaluations
+
 To be updated soon!
 
 ## Q&A

@@ -343,7 +343,7 @@
         // Save last used object
         localStorage.setItem(DEFAULT_OBJECT_KEY, cleanObjectId);
         
-        showStatus(`Successfully loaded: ${cleanObjectId}`, 'success');
+        showStatus(`Successfully loaded: ${cleanObjectId}. It make take a few seconds to render.`, 'success');
         
       } catch (error) {
         console.error('Error loading object:', error);
