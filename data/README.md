@@ -2,7 +2,7 @@
 
 # Data Downloading & Preprocessing
 
-Every model training requires data. At The 3D Gen Playground, we are dedicated to making 3D data open and consistent. We provide public access to a fixed set of data to make 3D Gen model training consistent. All you need to do is download and run a few preprocessing steps.
+Every model training requires data. At the 3D Gen Playground, we are dedicated to making 3D data open and consistent. We provide public access to a fixed set of data to make 3D Gen model training consistent. All you need to do is download the data and run a few preprocessing steps.
 
 This page provides detailed instructions on how to (very easily) set up consistent training data for the 3D object generation task.
 
@@ -32,7 +32,11 @@ Unlike images and videos where pixels are the common standard representation, 3D
 
 In this project, we use [**3D Gaussian Splats**](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) as the parameterization, due to its explicit parameterization and amazing rendering quality.
 
-We use the high-quality 3DGS fittings from [**Gaussian Verse**](https://gaussianverse.stanford.edu).
+We use the high-quality 3DGS fittings from [**Gaussian Verse**](https://gaussianverse.stanford.edu). For each instance provided in the GaussianVerse dataset, there are:
+* `point_cloud.ply` with fixed 128×128=16,384 3D Gaussians. The fixed length makes it possible to pass them to any generative models.
+* `point_cloud.ply` in 59 feature dimensions. Contains 3D coordinates, opacity, spherical harmonics, scales, and rotations.
+* `gs2sphere.npy` with mappings between unstructured 3D Gaussians to uniformly sampled points on the surface of a unit sphere.
+* [`sphere2plane.npy`](https://downloads.cs.stanford.edu/vision/gaussianverse/sphere2plane.npy) with mappings between the points on the surface of the sphere to a standard square 2D plane. 
 
 To start automatic downloading, update the paths in `download_3dgs.sh` and run:
 
@@ -48,7 +52,7 @@ source download_3dgs.sh
 > **💾 Disk Storage Requirements**
 > - **Total: 371 MB**
 
-We use the captions from [**Cap3D**](https://huggingface.co/datasets/tiange/Cap3D/tree/main) and [**3DTopia** ](https://github.com/3DTopia/3DTopia/releases).
+We use the captions from [**Cap3D**](https://huggingface.co/datasets/tiange/Cap3D/tree/main) and [**3DTopia**](https://github.com/3DTopia/3DTopia/releases).
 
 To start automatic downloading, update the paths in `download_captions.sh` and run:
 
@@ -86,7 +90,7 @@ source download_renderings.sh
 # WebDataset Preprocessing (Optional)
 
 > [!NOTE]
-> Making WebDatasets is only for text-to-3D generation tasks, after the 3DGS data and captions are downloaded. No images will be needed or encoded in the .tar files due to their scale. You will need ~900GB additional disk storage for storing the processed .tar files.
+> Creating WebDatasets is only necessary for text-to-3D generation tasks, after the 3DGS data and captions are downloaded. No images will be needed or encoded in the .tar files due to their large scale. You will need approximately 900GB of additional disk storage for storing the processed .tar files.
 
 
 We provide a preprocessing script that converts 3DGS fittings and text captions into WebDataset-formatted .tar files for optimized loading. To start processing, update the paths in `make_webdataset.sh` and run:

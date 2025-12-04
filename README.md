@@ -107,6 +107,14 @@ For detailed usage, configuration, and integration instructions, see the **[view
 
 ## Models
 
+- [ ] Tokenizers
+- [ ] Transformer baseline
+- [ ] Pre-trained tokenizer weights
+
+To be updated soon!
+
+## Evaluations
+
 To be updated soon!
 
 ## Q&A
@@ -124,6 +132,22 @@ The challenge is two-fold:
 </ul>
 
 The 3D Gen Playground addresses these issues by leveraging the publicly available <a href="https://cs.stanford.edu/~xtiange/projects/gaussianverse/">GaussianVerse</a> 3DGS dataset. This enables native 3D generation without photometric dependencies, while establishing a consistent training protocol for the community.
+</details>
+
+<details>
+<summary><strong>Who should use this project?</strong></summary>
+<br>
+
+This project is perfect for anyone who:
+
+<ul>
+<li><strong>Wants to explore generative models for 3D</strong></li>
+<li><strong>Worries about competing with state-of-the-art models</strong> due to limited access to 'in-house' secret training data</li>
+<li><strong>Hesitates to enter 3D generation research</strong> because the barriers feel too high</li>
+</ul>
+
+We've designed this project to democratize 3D object generation: all you need to do is download the data and start training. No complex pipelines, no proprietary datasets, just plug-and-play components ready for your research. Give it a try!
+
 </details>
 
 <details>

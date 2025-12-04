@@ -4,458 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>3DGen Playground • Interactive 3DGS Viewer</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-      color: #fff;
-      background-color: rgb(43, 41, 40);
-      overflow: hidden;
-    }
-
-    .viewer-container {
-      width: 100vw;
-      height: 100vh;
-      position: relative;
-    }
-
-    .spark-canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
-
-    /* Header */
-    .header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%);
-      padding: 20px 30px;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .logo {
-      font-size: 1.2rem;
-      font-weight: 600;
-      color: #fff;
-      text-decoration: none;
-      white-space: nowrap;
-    }
-
-    .logo:hover {
-      color: #ff6c6c;
-    }
-
-    /* Control Panel */
-    .control-panel {
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(30, 30, 30, 0.95);
-      backdrop-filter: blur(10px);
-      border-radius: 12px;
-      padding: 20px 30px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-      z-index: 100;
-      min-width: 600px;
-      max-width: 90vw;
-    }
-
-    .settings-row {
-      margin-bottom: 15px;
-      padding-bottom: 15px;
-      border-bottom: 1px solid rgb(50, 50, 50);
-    }
-
-    .settings-button {
-      padding: 6px 12px;
-      background: rgb(47, 47, 47);
-      border: 1px solid rgb(60, 60, 60);
-      border-radius: 4px;
-      color: #aaa;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .settings-button:hover {
-      background: rgb(60, 60, 60);
-      color: #fff;
-    }
-
-    .input-group {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 15px;
-    }
-
-    .input-label {
-      font-size: 0.9rem;
-      color: #aaa;
-      min-width: 100px;
-    }
-
-    .object-input {
-      flex: 1;
-      padding: 10px 15px;
-      background-color: rgb(47, 47, 47);
-      border: 1px solid rgb(60, 60, 60);
-      border-radius: 6px;
-      color: #fff;
-      font-size: 1rem;
-      font-family: 'Monaco', 'Courier New', monospace;
-    }
-
-    .object-input:focus {
-      outline: none;
-      border-color: #ff6c6c;
-    }
-
-    .load-button {
-      padding: 10px 25px;
-      background: linear-gradient(135deg, #ff6c6c 0%, #ff4949 100%);
-      border: none;
-      border-radius: 6px;
-      color: #fff;
-      font-size: 1rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .load-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(255, 108, 108, 0.4);
-    }
-
-    .load-button:active {
-      transform: translateY(0);
-    }
-
-    .load-button:disabled {
-      background: rgb(60, 60, 60);
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .status-message {
-      font-size: 0.85rem;
-      color: #aaa;
-      text-align: center;
-      min-height: 20px;
-      margin-top: 10px;
-    }
-
-    .status-message.error {
-      color: #ff6c6c;
-    }
-
-    .status-message.success {
-      color: #6cff6c;
-    }
-
-    .status-message.loading {
-      color: #6c9fff;
-    }
-
-    /* Info Panel */
-    .info-panel {
-      position: fixed;
-      top: 80px;
-      right: 30px;
-      background: rgba(30, 30, 30, 0.9);
-      backdrop-filter: blur(10px);
-      border-radius: 8px;
-      padding: 15px 20px;
-      z-index: 100;
-      font-size: 0.85rem;
-      line-height: 1.6;
-      max-width: 300px;
-    }
-
-    .info-panel h3 {
-      margin: 0 0 10px 0;
-      font-size: 1rem;
-      color: #ff6c6c;
-    }
-
-    .info-item {
-      display: flex;
-      justify-content: space-between;
-      margin: 5px 0;
-      color: #ccc;
-    }
-
-    .info-label {
-      color: #888;
-    }
-
-    .info-value {
-      color: #fff;
-      font-family: 'Monaco', 'Courier New', monospace;
-    }
-
-    /* Quick Examples */
-    .examples {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 10px;
-    }
-
-    .example-chip {
-      padding: 5px 12px;
-      background: rgb(47, 47, 47);
-      border: 1px solid rgb(60, 60, 60);
-      border-radius: 4px;
-      font-size: 0.8rem;
-      color: #aaa;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      font-family: 'Monaco', 'Courier New', monospace;
-    }
-
-    .example-chip:hover {
-      background: rgb(60, 60, 60);
-      color: #fff;
-      border-color: #ff6c6c;
-    }
-
-    .help-text {
-      font-size: 0.75rem;
-      color: #666;
-      margin-top: 8px;
-      text-align: center;
-    }
-
-    .data-root-display {
-      font-size: 0.75rem;
-      color: #888;
-      font-family: 'Monaco', 'Courier New', monospace;
-      margin-left: 10px;
-    }
-
-    /* Loading Spinner */
-    .spinner {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-top-color: #6c9fff;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-right: 8px;
-      vertical-align: middle;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* Toggle Button */
-    .toggle-panel-button {
-      position: fixed;
-      bottom: 30px;
-      right: 30px;
-      width: 50px;
-      height: 50px;
-      background: rgba(30, 30, 30, 0.95);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgb(60, 60, 60);
-      border-radius: 50%;
-      color: #fff;
-      font-size: 1.5rem;
-      cursor: pointer;
-      z-index: 99;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s ease;
-    }
-
-    .toggle-panel-button:hover {
-      background: rgb(60, 60, 60);
-      transform: scale(1.1);
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .control-panel {
-        min-width: auto;
-        width: calc(100% - 40px);
-        padding: 15px 20px;
-      }
-
-      .input-group {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .input-label {
-        min-width: auto;
-      }
-
-      .info-panel {
-        display: none;
-      }
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    /* Controls Hint Popup */
-    .controls-hint {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(20, 20, 20, 0.98);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 108, 108, 0.3);
-      border-radius: 16px;
-      padding: 30px 40px;
-      max-width: 600px;
-      z-index: 1000;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
-      animation: fadeInScale 0.4s ease-out;
-    }
-
-    @keyframes fadeInScale {
-      from {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.9);
-      }
-      to {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-      }
-    }
-
-    @keyframes fadeOut {
-      to {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.95);
-      }
-    }
-
-    .controls-hint.hiding {
-      animation: fadeOut 0.3s ease-out forwards;
-    }
-
-    .controls-hint h2 {
-      margin: 0 0 20px 0;
-      font-size: 1.5rem;
-      color: #ff6c6c;
-      text-align: center;
-    }
-
-    .controls-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px 30px;
-      margin-bottom: 20px;
-    }
-
-    .controls-section {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .controls-section h3 {
-      margin: 0 0 8px 0;
-      font-size: 1rem;
-      color: #aaa;
-      border-bottom: 1px solid rgba(255, 108, 108, 0.2);
-      padding-bottom: 5px;
-    }
-
-    .control-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.9rem;
-      color: #ddd;
-    }
-
-    .control-key {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 32px;
-      height: 24px;
-      padding: 0 8px;
-      background: rgba(60, 60, 60, 0.8);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 4px;
-      font-family: 'Monaco', 'Courier New', monospace;
-      font-size: 0.85rem;
-      color: #fff;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    }
-
-    .control-desc {
-      color: #ccc;
-    }
-
-    .controls-footer {
-      text-align: center;
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .dismiss-button {
-      padding: 10px 30px;
-      background: linear-gradient(135deg, #ff6c6c 0%, #ff4949 100%);
-      border: none;
-      border-radius: 6px;
-      color: #fff;
-      font-size: 1rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .dismiss-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(255, 108, 108, 0.4);
-    }
-
-    .hint-note {
-      font-size: 0.8rem;
-      color: #888;
-      margin-top: 10px;
-    }
-
-    @media (max-width: 768px) {
-      .controls-hint {
-        max-width: 90vw;
-        padding: 20px 25px;
-      }
-
-      .controls-grid {
-        grid-template-columns: 1fr;
-        gap: 15px;
-      }
-
-      .control-item {
-        font-size: 0.85rem;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <script type="importmap">
@@ -492,18 +41,11 @@
 
     <!-- Control Panel -->
     <div class="control-panel" id="controlPanel">
-      <!-- Data Root Path Setting -->
+      <!-- Data Root Info (Read-only) -->
       <div class="settings-row">
         <div class="input-group" style="margin-bottom: 0;">
-          <label class="input-label" for="dataRootInput">Data Root:</label>
-          <input 
-            type="text" 
-            id="dataRootInput" 
-            class="object-input" 
-            placeholder="e.g., ../sample_data"
-            autocomplete="off"
-          />
-          <button class="settings-button" id="saveRootButton">Save</button>
+          <label class="input-label">Data Root:</label>
+          <span class="data-root-display" id="dataRootDisplay" style="flex: 1; color: #aaa; font-size: 0.85rem;">Loading...</span>
         </div>
       </div>
 
@@ -634,8 +176,7 @@
 
     // DOM Elements
     const sparkCanvas = document.getElementById('sparkCanvas');
-    const dataRootInput = document.getElementById('dataRootInput');
-    const saveRootButton = document.getElementById('saveRootButton');
+    const dataRootDisplay = document.getElementById('dataRootDisplay');
     const objectInput = document.getElementById('objectInput');
     const loadButton = document.getElementById('loadButton');
     const statusMessage = document.getElementById('statusMessage');
@@ -675,70 +216,43 @@
 
     // State
     let currentSplat = null;
-    let serverConfig = null;
-    const DATA_ROOT_KEY = '3dgen_viewer_data_root';
+    let dataRootPath = null;
     const DEFAULT_OBJECT_KEY = '3dgen_viewer_default_object';
 
     // Fetch configuration from server (.env file)
     async function fetchServerConfig() {
       try {
         const response = await fetch('/api/config');
-        serverConfig = await response.json();
-        console.log('Server config loaded:', serverConfig);
-        return serverConfig;
+        const config = await response.json();
+        dataRootPath = config.dataRootPath;
+        
+        // Update UI display
+        if (dataRootPath) {
+          // Show simplified path (remove /absolute/ prefix for display)
+          const displayPath = dataRootPath.startsWith('/absolute/') 
+            ? dataRootPath.substring(9) 
+            : dataRootPath;
+          dataRootDisplay.textContent = displayPath;
+          console.log('Using GS_PATH from .env:', displayPath);
+        } else {
+          dataRootDisplay.textContent = '⚠️  Not configured';
+          dataRootDisplay.style.color = '#ff6c6c';
+          showStatus('⚠️  Please configure GS_PATH in .env file', 'error');
+          console.warn('No data root configured. Please set GS_PATH in .env');
+        }
+        
+        return config;
       } catch (error) {
-        console.warn('Could not fetch server config:', error);
+        console.error('Could not fetch server config:', error);
+        dataRootDisplay.textContent = '❌ Error loading config';
+        dataRootDisplay.style.color = '#ff6c6c';
         return { dataRootPath: null, source: 'none' };
       }
     }
 
-    // Load/Save data root path
-    function getDataRoot() {
-      // Priority: localStorage override > server config (.env)
-      const localOverride = localStorage.getItem(DATA_ROOT_KEY);
-      if (localOverride) {
-        return localOverride;
-      }
-      return serverConfig?.dataRootPath || null;
-    }
-
-    function saveDataRoot(path) {
-      localStorage.setItem(DATA_ROOT_KEY, path);
-      dataRootInput.value = path;
-      showStatus('Data root path saved! (Override active)', 'success');
-      console.log('Data root path override saved:', path);
-    }
-
-    function resetToServerConfig() {
-      localStorage.removeItem(DATA_ROOT_KEY);
-      const serverPath = serverConfig?.dataRootPath || '';
-      dataRootInput.value = serverPath;
-      if (serverPath) {
-        showStatus('Reset to .env config', 'success');
-      } else {
-        showStatus('No .env config found. Please enter path manually.', 'error');
-      }
-      console.log('Reset to server config:', serverPath);
-    }
-
     async function initializeSettings() {
-      // Fetch server configuration first
+      // Fetch server configuration
       await fetchServerConfig();
-      
-      // Load data root path (with priority system)
-      const dataRoot = getDataRoot();
-      dataRootInput.value = dataRoot || '';
-      
-      // Show where the config comes from
-      const localOverride = localStorage.getItem(DATA_ROOT_KEY);
-      if (localOverride) {
-        console.log('Using localStorage override:', dataRoot);
-      } else if (serverConfig?.source === 'env') {
-        console.log('Using GS_PATH from .env:', dataRoot);
-      } else {
-        console.log('No data root configured. Please set GS_PATH in .env or enter manually.');
-        showStatus('⚠️  Please configure data root path (set GS_PATH in .env or enter below)', 'error');
-      }
       
       // Load last used object (optional)
       const lastObject = localStorage.getItem(DEFAULT_OBJECT_KEY);
@@ -762,15 +276,13 @@
 
     // Build PLY path from object ID
     function buildPlyPath(objectId) {
-      const dataRoot = getDataRoot();
-      
-      if (!dataRoot) {
-        throw new Error('Data root path not configured. Please set GS_PATH in .env or configure manually.');
+      if (!dataRootPath) {
+        throw new Error('Data root path not configured. Please set GS_PATH in .env file.');
       }
       
       // Remove leading/trailing slashes
       const cleanObjectId = objectId.trim().replace(/^\/+|\/+$/g, '');
-      let cleanRoot = dataRoot.replace(/\/+$/, '');
+      let cleanRoot = dataRootPath.replace(/\/+$/, '');
       
       // Check if this is an absolute path outside repo (has /absolute/ prefix from server)
       if (cleanRoot.startsWith('/absolute/')) {
@@ -831,7 +343,7 @@
         // Save last used object
         localStorage.setItem(DEFAULT_OBJECT_KEY, cleanObjectId);
         
-        showStatus(`Successfully loaded: ${cleanObjectId}`, 'success');
+        showStatus(`Successfully loaded: ${cleanObjectId}. It make take a few seconds to render.`, 'success');
         
       } catch (error) {
         console.error('Error loading object:', error);
@@ -843,24 +355,6 @@
     }
 
     // Event Listeners
-    saveRootButton.addEventListener('click', () => {
-      const newRoot = dataRootInput.value.trim();
-      if (newRoot) {
-        saveDataRoot(newRoot);
-      } else {
-        showStatus('Please enter a valid path', 'error');
-      }
-    });
-
-    dataRootInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        const newRoot = dataRootInput.value.trim();
-        if (newRoot) {
-          saveDataRoot(newRoot);
-        }
-      }
-    });
-
     loadButton.addEventListener('click', () => {
       loadObject(objectInput.value);
     });
@@ -963,4 +457,5 @@
   </script>
 </body>
 </html>
+
 
