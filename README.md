@@ -2,7 +2,7 @@
 
 # The 3D Gen Playground
 
-![3dgen Teaser](assets/3dgen_teaser.webp)
+<img src="assets/3dgen_teaser.webp" alt="3dgen Teaser" style="width: 80%;">
 
 </div>
 
@@ -14,6 +14,14 @@ The 3D Gen Playground is a user-friendly codebase designed to accelerate 3D gene
 - [x] Interactive 3DGS Viewer (Spark-powered)
 - [ ] Baseline tokenizers and generative models
 - [ ] Evaluation pipeline
+
+## Simple 3D Gen Workflow
+
+With [GaussianVerse](https://gaussianverse.stanford.edu/), 3D generation can be as simple as image generation. We outline a typical workflow for 3D generation used in this codebase, as shown in the figure below:
+
+![workflow](assets/pipeline.webp)
+
+We provide precomputed sphere and plane structuralizations for all data in GaussianVerse. We handle the data preprocessing so you can focus on designing 3D generation models!
 
 ## Installation
 
@@ -174,7 +182,7 @@ We are always open to suggestions & contributions from the community, feel free 
 
 This project builds upon the excellent work of the open-source community:
 
-* We utilize 3D parameterizations from [GaussianVerse](https://cs.stanford.edu/~xtiange/projects/gaussianverse/), 2D renderings from [GObjaverse](https://aigc3d.github.io/gobjaverse/), and captions from [3DTopia](https://github.com/3DTopia/3DTopia) and [Cap3D](https://cap3d-um.github.io/).
+* We utilize 3D parameterizations from [GaussianVerse](https://gaussianverse.stanford.edu/), 2D renderings from [GObjaverse](https://aigc3d.github.io/gobjaverse/), and captions from [3DTopia](https://github.com/3DTopia/3DTopia) and [Cap3D](https://cap3d-um.github.io/).
 * Parts of the codebase were inspired by [GaussianAtlas](https://cs.stanford.edu/~xtiange/projects/gaussianatlas/), [GaussianCube](https://gaussiancube.github.io/), and [LGM](https://me.kiui.moe/lgm/).
 * Our web rendering is powered by [Spark](https://github.com/sparkjsdev/spark) @ [World Labs](https://www.worldlabs.ai/).
 * We thank [Ryan Zhijie Rong](https://ryan-rong-24.github.io/) for his contributions to part of this project.
