@@ -105,6 +105,19 @@ Enter an object ID (e.g., `9350303`) or path (e.g., `1876/9374307`) to instantly
 
 For detailed usage, configuration, and integration instructions, see the **[viewer/](viewer/)** folder.
 
+## Helper Scripts
+
+### Gaussian Splat to Atlas Conversion (`gs2atlas`)
+
+We provide a [reference implementation ](helpers/gs2atlas.py) for converting fitted 3D Gaussian splats into atlas (2D plane) representations. This utility maps 3D Gaussians onto a canonical 2D grid via sphere parameterization and optimal transport (OT) matching.
+
+
+**Pipeline:** Load PLY → filter by opacity → pad/prune to 128×128 → sort → OT match to sphere → reorder by sphere-to-plane mapping → save as (128, 128, C) tensor (`.pt`)
+
+**Requirements:** In addition to the main dependencies, you need `pot` (Python Optimal Transport) and `lapjv`. You also need to download [`sphere2plane.npy`](https://downloads.cs.stanford.edu/vision/gaussianverse/sphere2plane.npy) from GaussianVerse.
+
+**Note:** This is a reference implementation snippet. Configure the path to `sphere2plane.npy` and other placeholders (e.g., `PLY_ITERATION`, `ATLAS_RESOLUTION`) at the top of the script before running.
+
 ## Models
 
 - [ ] Tokenizers
