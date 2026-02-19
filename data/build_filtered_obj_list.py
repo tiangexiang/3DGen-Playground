@@ -33,7 +33,7 @@ def main(args):
     print(f"Input list has {len(obj_list)} entries")
 
     filtered = {}
-    missing = []
+    missing_count = 0
     for obj_id, tar_gz_path in tqdm(obj_list.items(), desc="Checking 3DGS data"):
         path_part = tar_gz_path.replace('.tar.gz', '')
         data_dir = gs_path / path_part
@@ -42,7 +42,7 @@ def main(args):
         if gs2sphere_path.exists() and ply_path.exists():
             filtered[obj_id] = tar_gz_path
         else:
-            missing.append(obj_id)
+            missing_count += 1
 
     out_path = Path(args.output_json)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -50,7 +50,7 @@ def main(args):
         json.dump(filtered, f, indent=2)
 
     print(f"Kept: {len(filtered)} objects")
-    print(f"Excluded: {len(missing)} objects")
+    print(f"Excluded: {missing_count} objects")
     print(f"Saved: {out_path}")
 
 
