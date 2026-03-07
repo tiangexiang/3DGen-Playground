@@ -78,6 +78,18 @@ We provide two types of data loaders to facilitate your training process:
 
 For detailed information and plug-and-play instructions, see the **[dataloaders/](dataloaders/)** folder.
 
+## Dataset Labels
+
+To simplify the training objective, the data is labeled so the model can be conditioned on **classes** rather than raw captions. 
+
+### Clustering Pipeline
+1. **Embedding:** Captions were embedded using `gte-Qwen2-1.5B-instruct`.
+2. **Reduction:** Dimensionality reduction via **UMAP**.
+3. **Clustering:** Cluster recognition via **HDBSCAN**.
+
+### Reference Files
+* `object_classification/cluster_summary.txt`: Overview of all generated classes.
+* `object_classification/object_to_class.json`: Mapping of specific Object IDs to assigned classes.
 ## Interactive 3DGS Viewer
 
 We provide a production-ready web viewer for exploring and visualizing 3DGS data. Perfect for:
