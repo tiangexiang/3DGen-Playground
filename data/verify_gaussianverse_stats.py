@@ -206,7 +206,13 @@ def main() -> int:
     parser.add_argument("--gs_path", type=str, required=True, help="GaussianVerse root directory")
     parser.add_argument("--mean_file", type=str, required=True, help="Precomputed mean .pt file")
     parser.add_argument("--std_file", type=str, required=True, help="Precomputed std .pt file")
-    parser.add_argument("--limit", type=int, default=0, help="Limit verification to the first N objects")
+    parser.add_argument("--limit", type=int, default=0, help="Limit verification to N objects (after optional shuffle)")
+    parser.add_argument(
+        "--shuffle_seed",
+        type=int,
+        default=None,
+        help="If set, shuffle objects with this seed before applying --limit (for unbiased sampling)",
+    )
     parser.add_argument("--workers", type=int, default=0, help="Worker processes to use; 0 selects automatically")
     parser.add_argument("--chunk_size", type=int, default=32, help="Number of objects per worker task")
     parser.add_argument(
@@ -219,6 +225,12 @@ def main() -> int:
         action="store_true",
         help="Skip objects whose required local files are missing and report how many were skipped",
     )
+    parser.add_argument(
+        "--dump_dir",
+        type=str,
+        default=None,
+        help="If set, dump per-channel computed mean/std (raw and normalized) as .npy files into this dir",
+    )
     args = parser.parse_args()
 
     if args.chunk_size <= 0:
@@ -228,6 +240,10 @@ def main() -> int:
 
     obj_data = _load_obj_lists(args.obj_list)
     tar_paths = list(obj_data.values())
+    if args.shuffle_seed is not None:
+        rng = np.random.default_rng(args.shuffle_seed)
+        perm = rng.permutation(len(tar_paths))
+        tar_paths = [tar_paths[i] for i in perm]
     if args.limit > 0:
         tar_paths = tar_paths[: args.limit]
     if not tar_paths:
@@ -322,11 +338,26 @@ def main() -> int:
     _print_diff_summary("Raw mean vs precomputed mean", raw_mean, precomputed_mean)
     _print_diff_summary("Raw std vs precomputed std", raw_std, precomputed_std)
 
+    norm_mean = None
+    norm_std = None
     if compute_normalized:
         norm_mean, norm_std = _finalize_stats(norm_sum, norm_sumsq, norm_count)
         print(f"Normalized accumulation: points={norm_count:,}")
         _print_diff_summary("Normalized mean vs 0", norm_mean, np.zeros_like(norm_mean))
         _print_diff_summary("Normalized std vs 1", norm_std, np.ones_like(norm_std))
+
+    if args.dump_dir:
+        dump_dir = Path(args.dump_dir)
+        dump_dir.mkdir(parents=True, exist_ok=True)
+        np.save(dump_dir / "raw_mean.npy", raw_mean)
+        np.save(dump_dir / "raw_std.npy", raw_std)
+        np.save(dump_dir / "precomputed_mean.npy", precomputed_mean)
+        np.save(dump_dir / "precomputed_std.npy", precomputed_std)
+        np.save(dump_dir / "raw_count.npy", np.asarray([raw_count], dtype=np.int64))
+        if norm_mean is not None and norm_std is not None:
+            np.save(dump_dir / "norm_mean.npy", norm_mean)
+            np.save(dump_dir / "norm_std.npy", norm_std)
+        print(f"Dumped per-channel arrays to {dump_dir}")
 
     return 0
 

@@ -10,7 +10,7 @@ from jit.diffusion.gaussian_diffusion import get_named_beta_schedule
 if TYPE_CHECKING:
     from diffusers import DPMSolverMultistepScheduler
 
-SAMPLER_CHOICES = ("heun", "euler", "dpm", "ddpm")
+SAMPLER_CHOICES = ("heun", "euler", "dpm", "ddpm", "ddim")
 
 
 def resolve_sampling_shape(
@@ -116,14 +116,18 @@ def _jit_velocity_from_xstart(
     cfg_scale: float,
     cfg_interval: tuple[float, float],
     t_eps: float,
+    diffusion_steps: int = 1000,
 ) -> torch.Tensor:
+    """Evaluate velocity at continuous time t by predicting x₀ and deriving v = (x₀ - x_t) / (1 - t).
+
+    The model outputs a prediction of the clean data x₀.  Velocity is then
+    computed as  v = (x₀_pred - x_t) / (1 - t), clamped by t_eps to avoid
+    division by zero near t = 1.
+    """
     model_dtype = next(model.parameters()).dtype
-    t_batch = torch.full(
-        (sample.shape[0],),
-        float(t_value.item()),
-        device=sample.device,
-        dtype=torch.float32,
-    )
+    # Scale continuous t ∈ [0, 1] to discrete integer range for the model's timestep embedding.
+    t_discrete = (t_value * (diffusion_steps - 1)).round().clamp(0, diffusion_steps - 1).long()
+    t_batch = t_discrete.expand(sample.shape[0]).to(device=sample.device)
     sample_input = sample.to(dtype=model_dtype)
     x_cond = model(sample_input, t_batch, class_labels).float()
     denom = (1.0 - t_value).clamp_min(t_eps).to(dtype=sample.dtype)
@@ -159,6 +163,7 @@ def _jit_euler_step(
     cfg_scale: float,
     cfg_interval: tuple[float, float],
     t_eps: float,
+    diffusion_steps: int = 1000,
 ) -> torch.Tensor:
     velocity = _jit_velocity_from_xstart(
         model=model,
@@ -168,6 +173,7 @@ def _jit_euler_step(
         cfg_scale=cfg_scale,
         cfg_interval=cfg_interval,
         t_eps=t_eps,
+        diffusion_steps=diffusion_steps,
     )
     step = (t_next - t_value).to(dtype=sample.dtype)
     return sample + step * velocity
@@ -183,6 +189,7 @@ def _jit_heun_step(
     cfg_scale: float,
     cfg_interval: tuple[float, float],
     t_eps: float,
+    diffusion_steps: int = 1000,
 ) -> torch.Tensor:
     velocity_t = _jit_velocity_from_xstart(
         model=model,
@@ -192,6 +199,7 @@ def _jit_heun_step(
         cfg_scale=cfg_scale,
         cfg_interval=cfg_interval,
         t_eps=t_eps,
+        diffusion_steps=diffusion_steps,
     )
     step = (t_next - t_value).to(dtype=sample.dtype)
     sample_euler = sample + step * velocity_t
@@ -203,6 +211,7 @@ def _jit_heun_step(
         cfg_scale=cfg_scale,
         cfg_interval=cfg_interval,
         t_eps=t_eps,
+        diffusion_steps=diffusion_steps,
     )
     return sample + step * (0.5 * (velocity_t + velocity_t_next))
 
@@ -217,6 +226,7 @@ def sample_with_jit_ode(
     num_inference_steps: int,
     device: torch.device,
     predict_xstart: bool,
+    diffusion_steps: int = 1000,
     cfg_scale: float = 1.0,
     cfg_interval: tuple[float, float] = (0.0, 1.0),
     t_eps: float = 5e-2,
@@ -259,6 +269,7 @@ def sample_with_jit_ode(
             cfg_scale=cfg_scale,
             cfg_interval=cfg_interval,
             t_eps=t_eps,
+            diffusion_steps=diffusion_steps,
         )
 
     sample = _jit_euler_step(
@@ -270,6 +281,7 @@ def sample_with_jit_ode(
         cfg_scale=cfg_scale,
         cfg_interval=cfg_interval,
         t_eps=t_eps,
+        diffusion_steps=diffusion_steps,
     )
     if was_training:
         model.train()
@@ -330,6 +342,74 @@ def sample_with_dpm(
             generator=generator,
             return_dict=False,
         )[0]
+    if was_training:
+        model.train()
+
+    return sample
+
+
+@torch.no_grad()
+def sample_with_ddim(
+    *,
+    model: torch.nn.Module,
+    shape: tuple[int, ...],
+    class_labels: torch.Tensor,
+    num_inference_steps: int,
+    device: torch.device,
+    predict_xstart: bool,
+    noise_schedule: str = "linear",
+    diffusion_steps: int = 1000,
+    eta: float = 0.0,
+    cfg_scale: float = 1.0,
+    cfg_interval: tuple[float, float] = (0.0, 1.0),
+    generator: Optional[torch.Generator] = None,
+) -> torch.Tensor:
+    shape = _validate_sampling_shape(model, shape)
+    diffusion = build_ddpm_diffusion(
+        predict_xstart=predict_xstart,
+        noise_schedule=noise_schedule,
+        diffusion_steps=diffusion_steps,
+        num_inference_steps=num_inference_steps,
+    )
+
+    sample_dtype = next(model.parameters()).dtype
+    noise = torch.randn(shape, device=device, dtype=torch.float32, generator=generator)
+
+    was_training = model.training
+    model.eval()
+    model_kwargs = {"y": class_labels}
+
+    if cfg_scale != 1.0:
+        y_embedder = getattr(model, "y_embedder", None)
+        num_classes = getattr(y_embedder, "num_classes", None)
+        if num_classes is None:
+            raise ValueError("DDIM CFG requires model.y_embedder.num_classes to be available")
+        null_labels = torch.full_like(class_labels, num_classes)
+        low, high = cfg_interval
+
+        def model_fn(x: torch.Tensor, t: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+            # t here is the remapped original timestep (in [0, diffusion_steps-1])
+            t_frac = float(t[0].item()) / max(1, diffusion_steps - 1)
+            # Match the CFG interval logic used in _jit_velocity_from_xstart
+            apply_cfg = t_frac < high and (low == 0.0 or t_frac > low)
+            if not apply_cfg:
+                return model(x.to(dtype=sample_dtype), t, y)
+            out_cond = model(x.to(dtype=sample_dtype), t, y)
+            out_uncond = model(x.to(dtype=sample_dtype), t, null_labels)
+            return out_uncond + cfg_scale * (out_cond - out_uncond)
+    else:
+        def model_fn(x: torch.Tensor, t: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+            return model(x.to(dtype=sample_dtype), t, y)
+
+    sample = diffusion.ddim_sample_loop(
+        model_fn,
+        shape,
+        noise=noise,
+        clip_denoised=False,
+        model_kwargs=model_kwargs,
+        device=device,
+        eta=eta,
+    )
     if was_training:
         model.train()
 
@@ -411,6 +491,7 @@ def sample_model(
     cfg_interval: tuple[float, float] = (0.0, 1.0),
     t_eps: float = 5e-2,
     noise_scale: float = 1.0,
+    ddim_eta: float = 0.0,
     generator: Optional[torch.Generator] = None,
 ) -> torch.Tensor:
     if sampler in {"heun", "euler"}:
@@ -422,6 +503,7 @@ def sample_model(
             num_inference_steps=num_inference_steps,
             device=device,
             predict_xstart=predict_xstart,
+            diffusion_steps=diffusion_steps,
             cfg_scale=cfg_scale,
             cfg_interval=cfg_interval,
             t_eps=t_eps,
@@ -455,6 +537,21 @@ def sample_model(
             predict_xstart=predict_xstart,
             noise_schedule=noise_schedule,
             diffusion_steps=diffusion_steps,
+            generator=generator,
+        )
+    if sampler == "ddim":
+        return sample_with_ddim(
+            model=model,
+            shape=shape,
+            class_labels=class_labels,
+            num_inference_steps=num_inference_steps,
+            device=device,
+            predict_xstart=predict_xstart,
+            noise_schedule=noise_schedule,
+            diffusion_steps=diffusion_steps,
+            eta=ddim_eta,
+            cfg_scale=cfg_scale,
+            cfg_interval=cfg_interval,
             generator=generator,
         )
     raise ValueError(f"Unknown sampler {sampler!r}. Available samplers: {', '.join(SAMPLER_CHOICES)}")

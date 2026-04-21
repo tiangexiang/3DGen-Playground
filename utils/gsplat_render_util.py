@@ -17,6 +17,12 @@ from PIL import Image
 
 logger = logging.getLogger(__name__)
 
+# Cache the inverse of the sphere-to-plane permutation so _plane_to_point_cloud_batch
+# doesn't recompute it on every call during render-loss steps.
+# Keyed by (tensor data_ptr, device_str); the permutation tensor is held alive by
+# the caller (train_cameras / module state) for the full training run.
+_SPHERE_TO_PLANE_INV_CACHE: dict = {}
+
 RENDER_OPACITY_RAW_MIN = -12.0
 RENDER_OPACITY_RAW_MAX = 12.0
 RENDER_SCALE_RAW_MIN = -12.0
@@ -75,7 +81,7 @@ def _load_reference_cameras(ref_camera_tar: str) -> list[dict[str, Any]]:
 def _camera_viewmat_from_ref(ref_cam: dict[str, Any]) -> torch.Tensor:
     """Build a world-to-camera matrix matching the legacy renderer contract."""
     viewmat = np.zeros((4, 4), dtype=np.float32)
-    viewmat[:3, :3] = np.asarray(ref_cam["R"], dtype=np.float32).transpose()
+    viewmat[:3, :3] = np.asarray(ref_cam["R"], dtype=np.float32)
     viewmat[:3, 3] = np.asarray(ref_cam["T"], dtype=np.float32)
     viewmat[3, 3] = 1.0
     return torch.from_numpy(viewmat)
@@ -132,9 +138,13 @@ def _plane_to_point_cloud_batch(
     flat = planes.permute(0, 2, 3, 1).reshape(batch, num_points, channels)
     if plane_to_sphere is None:
         return flat
-    perm = plane_to_sphere.to(device=planes.device)
-    sphere_to_plane = torch.empty_like(perm)
-    sphere_to_plane[perm] = torch.arange(num_points, device=planes.device, dtype=perm.dtype)
+    cache_key = (plane_to_sphere.data_ptr(), str(planes.device))
+    sphere_to_plane = _SPHERE_TO_PLANE_INV_CACHE.get(cache_key)
+    if sphere_to_plane is None:
+        perm = plane_to_sphere.to(device=planes.device)
+        sphere_to_plane = torch.empty_like(perm)
+        sphere_to_plane[perm] = torch.arange(num_points, device=planes.device, dtype=perm.dtype)
+        _SPHERE_TO_PLANE_INV_CACHE[cache_key] = sphere_to_plane
     return flat.index_select(1, sphere_to_plane)
 
 
@@ -299,8 +309,15 @@ def _compute_render_loss_for_batch(
     device: torch.device,
     dc_only: bool = False,
     plane_to_sphere: Optional[torch.Tensor] = None,
+    sample_weights: Optional[torch.Tensor] = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    """Compute differentiable RGB, alpha-mask, and LPIPS losses over the full batch with gsplat."""
+    """Compute differentiable RGB, alpha-mask, and LPIPS losses over the full batch with gsplat.
+
+    Args:
+        sample_weights: Optional per-sample weights of shape (B,). When provided, each loss
+            is computed as a weighted average (sum(w * per_sample) / sum(w)) instead of a
+            uniform mean.  The caller is responsible for detaching these from the graph.
+    """
     batch_size = x_gt_full.shape[0]
     view_count = max(1, int(num_cam))
     total_cams = int(train_cameras["viewmats"].shape[0])
@@ -308,9 +325,15 @@ def _compute_render_loss_for_batch(
 
     gt_pc_norm = _plane_to_point_cloud_batch(x_gt_full.float(), plane_to_sphere)
     gt_pc_raw = _denormalize_point_cloud(gt_pc_norm, norm_mean_full, norm_std_full)
+    gt_is_dc_only = gt_pc_raw.shape[-1] == 14
     gt_gaussians = _point_clouds_to_gsplat_inputs(
-        gt_pc_raw.to(device), dc_only=False, detach_input=True
+        gt_pc_raw.to(device), dc_only=gt_is_dc_only, detach_input=True
     )
+    if dc_only and not gt_is_dc_only:
+        # Drop higher-order SH from GT so both sides render at the same SH degree;
+        # otherwise view-dependent specular effects in the GT create a loss that the
+        # DC-only prediction structurally cannot minimise.
+        gt_gaussians = {**gt_gaussians, "colors": gt_gaussians["colors"][..., :1, :], "sh_degree": 0}
 
     pred_pc_norm = _plane_to_point_cloud_batch(x0_pred.float(), plane_to_sphere)
     pred_pc_raw = _denormalize_point_cloud(pred_pc_norm, norm_mean_pred, norm_std_pred)
@@ -338,8 +361,18 @@ def _compute_render_loss_for_batch(
         return_alpha=True,
     )
 
-    l1_loss = torch.mean(torch.abs(pred - target))
-    alpha_l1_loss = torch.mean(torch.abs(pred_alpha - target_alpha))
+    # Per-sample losses: average over (cameras, channels, H, W) → shape (B,)
+    l1_per_sample = torch.abs(pred - target).mean(dim=(1, 2, 3, 4))
+    alpha_l1_per_sample = torch.abs(pred_alpha - target_alpha).mean(dim=(1, 2, 3, 4))
+
+    if sample_weights is not None:
+        w_sum = sample_weights.sum().clamp(min=1e-8)
+        l1_loss = (l1_per_sample * sample_weights).sum() / w_sum
+        alpha_l1_loss = (alpha_l1_per_sample * sample_weights).sum() / w_sum
+    else:
+        l1_loss = l1_per_sample.mean()
+        alpha_l1_loss = alpha_l1_per_sample.mean()
+
     lpips_loss = torch.tensor(0.0, dtype=torch.float32, device=device)
     if lpips_fn is not None:
         pred_n = (pred * 2.0 - 1.0).reshape(
@@ -348,7 +381,14 @@ def _compute_render_loss_for_batch(
         target_n = (target * 2.0 - 1.0).reshape(
             batch_size * len(cam_indices), 3, target.shape[-2], target.shape[-1]
         )
-        lpips_loss = lpips_fn(pred_n, target_n).mean()
+        # LPIPS returns (B*C, 1, 1, 1) → flatten to (B*C,) → reshape to (B, C) → mean over cameras
+        lpips_per_sample = lpips_fn(pred_n, target_n).flatten().view(
+            batch_size, len(cam_indices)
+        ).mean(dim=1)  # (B,)
+        if sample_weights is not None:
+            lpips_loss = (lpips_per_sample * sample_weights).sum() / w_sum
+        else:
+            lpips_loss = lpips_per_sample.mean()
 
     return l1_loss, alpha_l1_loss, lpips_loss
 
@@ -444,9 +484,12 @@ def _save_training_render_preview(
             x_gt_full[sample_idx : sample_idx + 1].float(), plane_to_sphere
         )
         gt_pc_raw = _denormalize_point_cloud(gt_pc_norm, norm_mean_full, norm_std_full)
+        gt_is_dc_only = gt_pc_raw.shape[-1] == 14
         gt_gaussians = _point_clouds_to_gsplat_inputs(
-            gt_pc_raw.to(device), dc_only=False, detach_input=True
+            gt_pc_raw.to(device), dc_only=gt_is_dc_only, detach_input=True
         )
+        if dc_only and not gt_is_dc_only:
+            gt_gaussians = {**gt_gaussians, "colors": gt_gaussians["colors"][..., :1, :], "sh_degree": 0}
 
         pred_pc_norm = _plane_to_point_cloud_batch(
             x0_pred[sample_idx : sample_idx + 1].float(), plane_to_sphere

@@ -1,0 +1,17 @@
+# Hot-reloaded every `--overrides_every` training steps (default 1000) and once at resume/start step.
+# Pass:  python jit/train_gsplat.py ... --overrides_yaml jit/configs/overrides.yaml
+# Only keys present are applied; omitted keys keep their previous values.
+#
+# lr_scale: multiply the LR schedule output (warmup/cosine/none) by this factor; must be > 0.
+# max_grad_norm: gradient clipping threshold (0 = disable clipping).
+# Render loss weights: same semantics as CLI / main config.
+# aux_classifier_weight: weight on auxiliary cross-entropy head. Only has effect
+#   if the run was started with --aux_classifier / aux_classifier: true — the
+#   head is instantiated at model construction, not toggleable at runtime.
+# P_mean: bias for JiT logit-normal timestep sampling before sigmoid (pairs with P_std in main config).
+#         Ignored when `P_mean_schedule` is set in the main config — the curriculum wins.
+# grad_norm_log_every_n_prints: log per-loss grad norms every N print intervals (1 = every print, 0 = disable).
+
+lr_scale: 1.0
+max_grad_norm: 5.0
+P_mean: 0.0

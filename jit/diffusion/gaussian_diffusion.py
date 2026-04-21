@@ -12,6 +12,12 @@ import enum
 
 from .diffusion_utils import discretized_gaussian_log_likelihood, normal_kl
 
+# Cache GPU copies of diffusion schedule arrays so _extract_into_tensor doesn't
+# pay the from_numpy→to(device) transfer overhead on every training step.
+# Keyed by (id(numpy_array), device_str); safe because schedule arrays are
+# instance attributes that live for the full training run.
+_SCHEDULE_TENSOR_CACHE: dict = {}
+
 
 def mean_flat(tensor):
     """
@@ -228,6 +234,78 @@ class GaussianDiffusion:
             _extract_into_tensor(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start
             + _extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise
         )
+
+    def flow_matching_q_sample(self, x_start, t_value, noise=None):
+        """JiT flow-matching interpolation.
+
+        Convention (matches ``jit.sampling._jit_velocity_from_xstart``):
+          * ``t_value == 0`` → pure noise.
+          * ``t_value == 1`` → clean data.
+
+        ``x_t = t * x_0 + (1 - t) * ε``.
+        """
+        if noise is None:
+            noise = th.randn_like(x_start)
+        assert noise.shape == x_start.shape
+        t_v = t_value.view(-1, *([1] * (x_start.ndim - 1))).to(dtype=x_start.dtype)
+        return t_v * x_start + (1.0 - t_v) * noise
+
+    def flow_matching_training_losses(
+        self,
+        model,
+        x_start,
+        t_value,
+        t_discrete,
+        model_kwargs=None,
+        noise=None,
+        channel_loss_weights=None,
+    ):
+        """JiT flow-matching loss with x₀ prediction.
+
+        ``t_value`` is continuous in (0, 1) and drives the interpolation
+        ``x_t = t * x_0 + (1 - t) * ε``. ``t_discrete`` is the integer timestep
+        (typically ``round(t_value * (T-1))``) fed to the model's timestep
+        embedding, keeping the sampler and trainer on the same grid. The model
+        predicts x₀ directly; loss is ``MSE(pred, x_0)``.
+
+        ``channel_loss_weights`` (optional) is a 1-D tensor of length C that
+        scales the per-channel squared error before spatial averaging. Use it
+        to compensate channels whose per-object spatial std is much smaller
+        than 1 after normalization (they'd otherwise get ~var² less gradient).
+        """
+        if self.model_mean_type != ModelMeanType.START_X:
+            raise ValueError(
+                "flow_matching_training_losses requires predict_xstart=True "
+                "(ModelMeanType.START_X); got "
+                f"{self.model_mean_type}"
+            )
+        if model_kwargs is None:
+            model_kwargs = {}
+        if noise is None:
+            noise = th.randn_like(x_start)
+
+        x_t = self.flow_matching_q_sample(x_start, t_value, noise=noise)
+        model_output = model(x_t, t_discrete, **model_kwargs)
+        assert model_output.shape == x_start.shape
+
+        sq_err = (x_start - model_output) ** 2
+        if channel_loss_weights is not None:
+            w = channel_loss_weights.to(device=sq_err.device, dtype=sq_err.dtype)
+            if w.ndim != 1 or w.shape[0] != sq_err.shape[1]:
+                raise ValueError(
+                    f"channel_loss_weights must be 1-D of length C={sq_err.shape[1]}, "
+                    f"got shape {tuple(w.shape)}"
+                )
+            view_shape = (1, -1) + (1,) * (sq_err.ndim - 2)
+            sq_err = sq_err * w.view(view_shape)
+
+        terms = {
+            "mse": mean_flat(sq_err),
+        }
+        terms["loss"] = terms["mse"]
+        terms["pred_xstart"] = model_output
+        terms["x_t"] = x_t
+        return terms
 
     def q_posterior_mean_variance(self, x_start, x_t, t):
         """
@@ -781,6 +859,11 @@ class GaussianDiffusion:
                 terms["loss"] = terms["mse"] + terms["vb"]
             else:
                 terms["loss"] = terms["mse"]
+            # Expose x0 prediction so callers can reuse it (e.g. render loss) without a second forward pass.
+            if self.model_mean_type == ModelMeanType.START_X:
+                terms["pred_xstart"] = model_output
+            else:
+                terms["pred_xstart"] = self._predict_xstart_from_eps(x_t=x_t, t=t, eps=model_output)
         else:
             raise NotImplementedError(self.loss_type)
 
@@ -867,7 +950,12 @@ def _extract_into_tensor(arr, timesteps, broadcast_shape):
                             dimension equal to the length of timesteps.
     :return: a tensor of shape [batch_size, 1, ...] where the shape has K dims.
     """
-    res = th.from_numpy(arr).to(device=timesteps.device)[timesteps].float()
+    key = (id(arr), str(timesteps.device))
+    arr_t = _SCHEDULE_TENSOR_CACHE.get(key)
+    if arr_t is None:
+        arr_t = th.from_numpy(arr).float().to(device=timesteps.device)
+        _SCHEDULE_TENSOR_CACHE[key] = arr_t
+    res = arr_t[timesteps]
     while len(res.shape) < len(broadcast_shape):
         res = res[..., None]
-    return res + th.zeros(broadcast_shape, device=timesteps.device)
+    return res.expand(broadcast_shape)

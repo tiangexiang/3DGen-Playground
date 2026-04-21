@@ -1,0 +1,59 @@
+# JiT `infer_gsplat.py` configuration.
+# Precedence: CLI > this file > argparse defaults.
+#
+# Required paths — fill these in before running:
+#   checkpoint, ref_camera_tar, mean_file, std_file, sphere2plane_path, class_map
+#
+# Usage:
+#   python jit/infer_gsplat.py --config jit/configs/infer_gsplat.yaml [--checkpoint path/to/ckpt.pt]
+
+# --- Required paths ---
+# checkpoint: output/dit_results/0100000.pt
+# ref_camera_tar: /path/to/ref_camera.tar.gz
+# mean_file: /path/to/gaussianverse_mean.pt
+# std_file: /path/to/gaussianverse_std.pt
+sphere2plane_path: data/sphere2plane.npy
+class_map: object_labels/object_to_class.json
+
+# --- Model (auto-detected from checkpoint if not set) ---
+# model: JiT-B/8
+# predict_xstart: true
+# noise_schedule: squaredcos_cap_v2
+# sh_degree0_only: true
+# class_dropout_prob: 0.2
+use_ema: true
+
+# --- Sampling ---
+sampler: heun           # heun | euler | dpm | ddpm
+num_steps: 100          # more steps = higher quality, slower
+diffusion_steps: 1000   # must match training
+
+# Classifier-free guidance (heun/euler only)
+cfg_scale: 4.0          # 1.0 = disabled; try 2.0–7.0
+cfg_interval:           # restrict CFG to this time window; [0.0, 1.0] = always on
+  - 0.0
+  - 1.0
+
+# JiT ODE knobs (heun/euler only)
+t_eps: 0.05             # min t to avoid div-by-zero; try 0.01–0.1
+noise_scale: 1.0        # scale on initial noise
+
+# DPM-Solver knobs (dpm only)
+dpm_solver_order: 2
+dpm_algorithm_type: "dpmsolver++"
+dpm_solver_type: midpoint
+dpm_timestep_spacing: trailing
+dpm_use_karras_sigmas: false
+
+# --- Generation ---
+num_samples: 4
+# class_label: null     # set to an integer to fix the class; omit for random per sample
+
+# --- Rendering ---
+render_size: 256        # output image resolution in pixels
+num_cameras: 4          # views to render per generated object
+random_cameras: false   # false = evenly spaced, true = random
+
+# --- Output ---
+output_dir: output/infer_results
+# seed: 42              # set for reproducibility

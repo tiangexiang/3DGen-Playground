@@ -1,0 +1,132 @@
+# JiT `train_gsplat.py` hyperparameters — matches argparse defaults in jit/train_gsplat.py.
+# Precedence: CLI > this file > argparse defaults.
+#
+# Required paths (obj_list, gs_path) are supplied by train_gsplat.sh + .env or on the CLI.
+#
+# Older train_gsplat.sh hard-coded (for reference): epochs 1000, batch_size 8, lr 5e-5,
+# squaredcos_cap_v2, sh_degree0_only + predict_xstart, render weights 10.0, train_render_size 512,
+# enable_render_loss_after 5000, gradient_accumulation_steps 4, num_workers 2, ckpt_every 5000,
+# train_render_log_every 100, val_every 100, train_render_log_num_cam 1.
+
+# --- Model ---
+model: JiT-B/8
+predict_xstart: true
+noise_schedule: squaredcos_cap_v2
+# CFG dropout. 0.2 starves class signal early; keep around 0.1 until CFG
+# visibly separates conditional vs unconditional predictions.
+class_dropout_prob: 0.1
+# Optional auxiliary classification head on top of mean-pooled transformer
+# tokens (trained with cross-entropy on un-dropped labels). Gives the trunk
+# a direct class-discriminative signal alongside the flow-matching MSE;
+# useful when `class_signal` stays stuck (see runs/2026-04-19 writeups).
+aux_classifier: false
+aux_classifier_weight: 0.0
+# LabelEmbedder embedding-table init std. 0.02 = original DiT recipe; bump
+# to ~0.1 to amplify class conditioning at init without changing architecture.
+label_embed_init_std: 0.1
+
+# --- Data (optional overrides; shell/env usually provides mean/std and paths) ---
+# mean_file: null
+# std_file: null
+class_map: object_labels/object_to_class.json
+sphere2plane_path: data/sphere2plane.npy
+sh_degree0_only: true
+# Inverse-frequency WeightedRandomSampler over class labels. Counters the
+# ~1000:1 class imbalance in the GaussianVerse aesthetic split.
+class_balanced_sampler: true
+# Per-channel MSE weighting. After global per-channel normalization, per-object
+# spatial std still varies ~3.5× across DC channels (0.27 on opacity → 0.94 on
+# SH DC rgb); channels with small spatial std get ~var² less gradient. These
+# weights = 1/spatial_std², capped at 3.0, normalized to mean=1. Audit script:
+# data/audit_norm_stats.py. Length must match in_channels (14 for sh_degree0_only).
+# DC indices: [0, 1, 2, 3, 4, 20, 36, 52, 53, 54, 55, 56, 57, 58]
+channel_loss_weights: "[0.766, 0.799, 0.757, 1.822, 1.036, 0.979, 1.006, 0.950, 0.980, 1.023, 1.822, 0.689, 0.687, 0.682]"
+
+# --- Render loss ---
+render_loss_weight: 0.1
+alpha_mask_loss_weight: 0.1
+lpips_loss_weight: 0.01
+lpips_net: vgg
+render_loss_num_cam: 1
+train_render_size: 128
+ref_camera_tar: /home/tiangexiang/gen3d/ref_camera.tar.gz
+enable_render_loss_after: 50000
+# Hard mask on FM t_value: render loss only applies when t_value >= cutoff
+# (i.e. the clean fraction is >= cutoff). 0 disables the mask.
+render_loss_noise_cutoff: 0.4
+train_render_log_every: 0
+train_render_log_num_cam: 2
+
+# --- Training ---
+epochs: 120
+batch_size: 16
+lr: 2e-4
+# none | warmup (ramp to lr then hold) | cosine (warmup then decay to lr_min)
+lr_schedule: cosine
+lr_warmup_steps: 500
+lr_min: 1e-5
+# cosine only: 0 = auto (epochs * len(loader) // gradient_accumulation_steps, after
+# accelerate.prepare — so real dataset size, num_processes, and drop_last are included).
+lr_cosine_total_steps: 0
+ema_decay: 0.995
+mixed_precision: fp16
+gradient_accumulation_steps: 1
+gradient_checkpointing: true
+max_grad_norm: 4.0
+num_workers: 4
+preload_to_cpu: false
+lazy_cache_to_cpu: false
+preload_max_samples: 0
+preload_workers: 0
+persistent_workers: true
+prefetch_factor: 2
+seed: 0
+# Logit-normal t ~ sigmoid(N(P_mean, P_std)). In this FM convention t=0 is
+# noise and t=1 is clean, so P_mean < 0 biases training toward noisy samples.
+P_mean: 0.0
+P_std: 1.0
+# Optional P_mean curriculum: list of [step, P_mean] control points, linearly
+# interpolated, held constant outside the endpoints. When set, this overrides
+# `P_mean` (and any P_mean in overrides.yaml).
+# P_mean_schedule:
+#   - [0,     -0.5]
+#   - [20000,  0.0]
+#   - [40000,  0.3]
+#   - [70000,  0.5]
+
+# Optional render-weight ramp: list of [step, rl1, alpha, lpips] control points,
+# linearly interpolated, held constant outside the endpoints. When set, this
+# overrides the static render_loss_weight / alpha_mask_loss_weight /
+# lpips_loss_weight (incl. values from overrides.yaml). Engagement is still gated
+# by enable_render_loss_after; the schedule only supplies weight values once engaged.
+# Target max weights (per runs/2026-04-20 grad-norm headroom): rl1=0.3, alpha=0.15,
+# lpips=0.02. Ramp starts at the engagement step (50 000) from zero and reaches the
+# max values over 30 000 opt steps; held flat thereafter.
+render_weight_schedule:
+  - [50000, 0.0, 0.0,  0.0]
+  - [80000, 0.3, 0.15, 0.02]
+
+# --- Logging / checkpoints / validation ---
+# Training uses JiT flow-matching noising (x_t = t*x_0 + (1-t)*eps, t=0 noise,
+# t=1 clean) via flow_matching_training_losses; heun/euler are the consistent
+# samplers. ddim/dpm/ddpm will produce garbage on FM checkpoints.
+log_every: 200
+grad_norm_log_every_n_prints: 10
+ckpt_every: 20000
+val_every: 1000
+val_sampling_steps: 100
+val_sampler: heun
+val_cfg_scale: 1.5
+ddim_eta: 0.0
+dpm_solver_order: 2
+dpm_algorithm_type: "dpmsolver++"
+dpm_solver_type: midpoint
+dpm_timestep_spacing: trailing
+dpm_use_karras_sigmas: false
+results_dir: output/dit_results
+
+# Hot-reload hyperparameters during training (optional):
+# overrides_yaml: jit/configs/overrides.yaml
+# overrides_every: 1000
+
+# resume: /home/hmolin/3DGen-Playground/output/jit_JiT-XL/8_results_gsplat/0020000.pt

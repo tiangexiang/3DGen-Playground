@@ -14,5 +14,4 @@ triton
 typing_extensions
 webdataset
 matplotlib
-logging
 plyfile>=0.7.4

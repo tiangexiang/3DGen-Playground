@@ -49,9 +49,13 @@ class VisionRotaryEmbeddingFast(nn.Module):
         self.register_buffer("freqs_sin", freqs_2d.sin(), persistent=False)
 
     def forward(self, x):
-        cos = self.freqs_cos.to(device=x.device, dtype=x.dtype).unsqueeze(0).unsqueeze(0)
-        sin = self.freqs_sin.to(device=x.device, dtype=x.dtype).unsqueeze(0).unsqueeze(0)
-        return x * cos + rotate_half(x) * sin
+        # Cache the dtype-converted buffers so we don't pay the .to() overhead
+        # on every forward pass during stable mixed-precision training.
+        if not hasattr(self, '_rope_cache_dtype') or self._rope_cache_dtype != x.dtype:
+            self._cos_cache = self.freqs_cos.to(dtype=x.dtype).unsqueeze(0).unsqueeze(0)
+            self._sin_cache = self.freqs_sin.to(dtype=x.dtype).unsqueeze(0).unsqueeze(0)
+            self._rope_cache_dtype = x.dtype
+        return x * self._cos_cache + rotate_half(x) * self._sin_cache
 
 
 class RMSNorm(nn.Module):
@@ -185,7 +189,7 @@ class TimestepEmbedder(nn.Module):
     """
     Embeds scalar timesteps into vector representations.
     """
-    def __init__(self, hidden_size, frequency_embedding_size=256):
+    def __init__(self, hidden_size, frequency_embedding_size=256, max_period=10000):
         super().__init__()
         self.mlp = nn.Sequential(
             nn.Linear(frequency_embedding_size, hidden_size, bias=True),
@@ -193,30 +197,29 @@ class TimestepEmbedder(nn.Module):
             nn.Linear(hidden_size, hidden_size, bias=True),
         )
         self.frequency_embedding_size = frequency_embedding_size
-
-    @staticmethod
-    def timestep_embedding(t, dim, max_period=10000):
-        """
-        Create sinusoidal timestep embeddings.
-        :param t: a 1-D Tensor of N indices, one per batch element.
-                          These may be fractional.
-        :param dim: the dimension of the output.
-        :param max_period: controls the minimum frequency of the embeddings.
-        :return: an (N, D) Tensor of positional embeddings.
-        """
-        # https://github.com/openai/glide-text2im/blob/main/glide_text2im/nn.py
-        half = dim // 2
+        # Pre-compute the frequency vector once; register as non-persistent buffer
+        # so it moves with the model (device-aware) without appearing in state_dict.
+        half = frequency_embedding_size // 2
         freqs = torch.exp(
             -math.log(max_period) * torch.arange(start=0, end=half, dtype=torch.float32) / half
-        ).to(device=t.device)
-        args = t[:, None].float() * freqs[None]
+        )
+        self.register_buffer("_freqs", freqs, persistent=False)
+
+    def timestep_embedding(self, t):
+        """
+        Create sinusoidal timestep embeddings.
+        :param t: a 1-D Tensor of N indices (possibly fractional), one per batch element.
+        :return: an (N, frequency_embedding_size) Tensor of positional embeddings.
+        """
+        # https://github.com/openai/glide-text2im/blob/main/glide_text2im/nn.py
+        args = t[:, None].float() * self._freqs[None]
         embedding = torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
-        if dim % 2:
+        if self.frequency_embedding_size % 2:
             embedding = torch.cat([embedding, torch.zeros_like(embedding[:, :1])], dim=-1)
         return embedding
 
     def forward(self, t):
-        t_freq = self.timestep_embedding(t, self.frequency_embedding_size)
+        t_freq = self.timestep_embedding(t)
         t_emb = self.mlp(t_freq)
         return t_emb
 
@@ -322,6 +325,8 @@ class DiT(nn.Module):
         bottleneck_dim=128,
         attn_drop=0.0,
         proj_drop=0.0,
+        aux_classifier=False,
+        label_embed_init_std=0.02,
     ):
         super().__init__()
         if input_size % patch_size != 0:
@@ -373,6 +378,12 @@ class DiT(nn.Module):
             for _ in range(depth)
         ])
         self.final_layer = FinalLayer(hidden_size, patch_size, self.out_channels)
+        self.aux_classifier = nn.Linear(hidden_size, num_classes) if aux_classifier else None
+        self._label_embed_init_std = float(label_embed_init_std)
+        # Stash the pooled aux logits during forward so the training loop can
+        # retrieve them without changing the forward() return signature (which
+        # would break flow_matching_training_losses's shape assertion).
+        self._aux_logits = None
         self.initialize_weights()
 
     def initialize_weights(self):
@@ -396,7 +407,7 @@ class DiT(nn.Module):
         nn.init.constant_(self.x_embedder.proj2.bias, 0)
 
         # Initialize label embedding table:
-        nn.init.normal_(self.y_embedder.embedding_table.weight, std=0.02)
+        nn.init.normal_(self.y_embedder.embedding_table.weight, std=self._label_embed_init_std)
 
         # Initialize timestep embedding MLP:
         nn.init.normal_(self.t_embedder.mlp[0].weight, std=0.02)
@@ -433,22 +444,31 @@ class DiT(nn.Module):
             return module(x, c, rope=rope)
         return ckpt_forward
 
-    def forward(self, x, t, y):
+    def forward(self, x, t, y, force_drop_ids=None):
         """
         Forward pass of JiT.
         x: (N, C, H, W) tensor of spatial inputs (3DGS features on grid)
         t: (N,) tensor of diffusion timesteps
         y: (N,) tensor of class labels
+        force_drop_ids: optional (N,) 0/1 tensor — when 1, replace that sample's
+            label with the unconditional slot. Lets the trainer pre-sample the
+            CFG drop mask so the aux classifier can skip dropped rows.
         """
         x = self.x_embedder(x) + self.pos_embed  # (N, T, D), where T = H * W / patch_size ** 2
         t = self.t_embedder(t)                   # (N, D)
-        y = self.y_embedder(y, self.training)    # (N, D)
+        y = self.y_embedder(y, self.training, force_drop_ids=force_drop_ids)  # (N, D)
         c = t + y                                # (N, D)
         for block in self.blocks:
             if self.gradient_checkpointing and self.training:
                 x = checkpoint(self.ckpt_wrapper(block, self.feat_rope), x, c, use_reentrant=False)
             else:
                 x = block(x, c, rope=self.feat_rope)                                     # (N, T, D)
+        # Aux classifier pools the transformer tokens before final_layer so
+        # gradients flow through the full trunk but not through the adaLN head.
+        if self.aux_classifier is not None:
+            self._aux_logits = self.aux_classifier(x.mean(dim=1))
+        else:
+            self._aux_logits = None
         x = self.final_layer(x, c)                # (N, T, patch_size ** 2 * out_channels)
         x = self.unpatchify(x)                   # (N, out_channels, H, W)
         return x

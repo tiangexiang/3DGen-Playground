@@ -26,6 +26,8 @@ venv/
 env/
 ENV/
 .venv
+.3dgen/
+3DGen/
 
 # IDEs
 .vscode/
@@ -60,3 +62,9 @@ config.env.example
 
 tests/
 dit3d/
+
+# Claude Code instructions (local dev tooling)
+CLAUDE.md
+
+# Personal/local inference configs
+jit/configs/my_*.yaml
