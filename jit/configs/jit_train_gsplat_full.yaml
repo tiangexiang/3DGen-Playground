@@ -9,7 +9,7 @@
 # train_render_log_every 100, val_every 100, train_render_log_num_cam 1.
 
 # --- Model ---
-model: JiT-B/8
+model: JiT-XL/8
 predict_xstart: true
 noise_schedule: squaredcos_cap_v2
 # CFG dropout. 0.2 starves class signal early; keep around 0.1 until CFG
@@ -28,7 +28,7 @@ label_embed_init_std: 0.1
 # --- Data (optional overrides; shell/env usually provides mean/std and paths) ---
 # mean_file: null
 # std_file: null
-class_map: object_labels/object_to_class.json
+class_map: object_labels/morphological_labels/object_to_class.json
 sphere2plane_path: data/sphere2plane.npy
 sh_degree0_only: true
 # Inverse-frequency WeightedRandomSampler over class labels. Counters the
@@ -58,7 +58,7 @@ train_render_log_num_cam: 2
 
 # --- Training ---
 epochs: 120
-batch_size: 16
+batch_size: 256
 lr: 2e-4
 # none | warmup (ramp to lr then hold) | cosine (warmup then decay to lr_min)
 lr_schedule: cosine
@@ -70,7 +70,7 @@ lr_cosine_total_steps: 0
 ema_decay: 0.995
 mixed_precision: fp16
 gradient_accumulation_steps: 1
-gradient_checkpointing: true
+gradient_checkpointing: false
 max_grad_norm: 4.0
 num_workers: 4
 preload_to_cpu: false
