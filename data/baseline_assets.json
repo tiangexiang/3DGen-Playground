@@ -1,0 +1,26 @@
+{
+  "ref_cameras.tar.gz": {
+    "sha256": "6672fc001fa40dea933c31e0d1417d40f74630e5681bcd80dbc3fac878c6b289",
+    "bytes": 3639
+  },
+  "sphere2plane.npy": {
+    "sha256": "4d5c661b2d02a47ad924ce84d7cbfac7b64070cd69687495e2c1ede5bdf859b7",
+    "bytes": 65664
+  },
+  "stats/all_mean_postfix.pt": {
+    "sha256": "4724bc6a960984c2948d7a40ebc0e9ae9d2213a4abc6251854653bdfa1322eae",
+    "bytes": 1832
+  },
+  "stats/all_std_postfix.pt": {
+    "sha256": "5731f402e057412b4aa61047c5df6d0652482b5b88086e9420008218da2a97cf",
+    "bytes": 1825
+  },
+  "stats/clip_thresholds_opacity_scales.pt": {
+    "sha256": "dd03a10551cd02bce2e107924f0a51fbad92cdc9d3b73aaf5d36b3ac0d637423",
+    "bytes": 2461
+  },
+  "stats/rank_quantiles_8ch_clipped.pt": {
+    "sha256": "ea151075390a95e78450a200e2afe634afa68105ea8b4f79c524c0ebba5f21a3",
+    "bytes": 149885
+  }
+}

@@ -1,0 +1,10 @@
+-r requirements.txt
+
+# Install a CUDA-compatible torch/torchvision pair first (see docs/training.md).
+torch>=2.4
+torchvision>=0.19
+transformers>=4.44,<5
+sentencepiece
+gsplat>=1.5,<2
+lpips==0.1.4
+ninja

@@ -1,0 +1,19 @@
+# Copy to configs/local.yml and edit the paths for your dataset.
+# Relative data/output paths are anchored to the repository root; ~ and $VAR expand.
+# Reference files in train.yml are relative to asset_dir (see docs/training.md).
+# _base alone is relative to this YAML file.
+_base: train.yml
+
+asset_dir: datasets/baseline_assets
+obj_list: datasets/3dgs/all_obj_list.json
+gs_path: datasets/3dgs
+caption_path: datasets/captions.json
+
+t5_token_dir: output/t5_tokens
+per_sample_zoom_file: output/preprocessing/per_sample_render_fov.pt
+cache_dir: output/cache/preload_text
+output_dir: output/runs/gaussian_splat_diffusion
+
+# Workers per training process. Adjust to the CPUs available on your machine.
+num_workers: 8
+wandb: false

@@ -56,3 +56,20 @@ config.env.example
 # Temporary files
 *.tmp
 *.bak
+
+# Training outputs and generated assets
+datasets/
+wandb/
+.worktrees/
+.3dgen/
+data/stats/per_sample_render_fov.pt
+data/stats/per_sample_render_fov.meta.json
+
+# Local training paths
+configs/local.yml
+configs/local-smoke.yml
+
+# External baseline assets; keep tensors and archives out of source control.
+data/*.npy
+data/*.tar.gz
+data/stats/*.pt
